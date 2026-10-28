@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Absensi</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: var(--tg-theme-bg-color, #ffffff);
+      --text: var(--tg-theme-text-color, #000000);
+      --hint: var(--tg-theme-hint-color, #888888);
+      --card: var(--tg-theme-secondary-bg-color, #f2f2f7);
+      --accent: var(--tg-theme-button-color, #2481cc);
+      --accent-text: var(--tg-theme-button-text-color, #ffffff);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px 16px 76px; font-family: -apple-system, system-ui, sans-serif;
+           background: var(--bg); color: var(--text); }
+    h3 { margin: 0 0 10px; overflow-wrap: anywhere; }
+    input, textarea, select { width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 8px;
+      border: 1px solid var(--hint); background: var(--bg); color: var(--text); font: inherit; }
+    label { display: block; font-size: 13px; color: var(--hint); margin-bottom: 2px; }
+    button { font: inherit; cursor: pointer; }
+    .btn { background: var(--accent); color: var(--accent-text); border: none; border-radius: 8px; padding: 9px 14px; }
+    .btn.sec { background: var(--card); color: var(--text); }
+    .btn.danger { background: #e53935; color: #fff; }
+    .btn:disabled { opacity: .4; }
+    .btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    .link-btn { background: none; border: none; color: var(--accent); padding: 0; }
+    .card { background: var(--card); border-radius: 12px; padding: 12px; margin-top: 10px; }
+    .card.click { cursor: pointer; }
+    .hint { color: var(--hint); font-size: 13px; margin-top: 4px; }
+    .ok { color: #2e7d32; font-weight: 600; }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .tabs { display: flex; gap: 8px; margin: 8px 0; }
+    .tab { flex: 1; padding: 8px; border-radius: 8px; border: none; background: var(--card); color: var(--text); }
+    .tab.on { background: var(--accent); color: var(--accent-text); }
+    .badge { display: inline-block; padding: 1px 9px; border-radius: 10px; font-size: 12px; color: #fff; margin: 2px 4px 2px 0; }
+    .b-hadir { background: #2e7d32; } .b-terlambat { background: #ef6c00; }
+    .b-izin { background: #1565c0; } .b-sakit { background: #6a1b9a; }
+    .p-open { background: #2e7d32; } .p-upcoming { background: #757575; }
+    .p-ended { background: #8d6e63; } .p-closed { background: #c62828; }
+    .qr { display: block; width: 100%; max-width: 320px; margin: 12px auto; background: #fff; padding: 8px;
+          border-radius: 12px; image-rendering: pixelated; }
+    .bigcode { font-size: 44px; font-weight: 700; text-align: center; letter-spacing: 4px; }
+    .center { text-align: center; }
+    #status { color: var(--hint); font-size: 14px; min-height: 20px; margin-bottom: 4px; }
+    .empty { text-align: center; color: var(--hint); margin-top: 24px; }
+    .att { border-top: 1px solid var(--bg); padding: 8px 0; }
+    .att select { width: auto; margin: 4px 0 0; padding: 4px; }
+    .pager { display: flex; justify-content: space-between; margin-top: 12px; }
+    #nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; padding: 8px 16px;
+           padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); background: var(--bg);
+           border-top: 1px solid var(--card); }
+    #nav button { flex: 1; padding: 10px; border: none; border-radius: 8px; background: var(--card); color: var(--text); }
+    #nav button.on { background: var(--accent); color: var(--accent-text); }
+  </style>
+</head>
+<body>
+  <h3 id="hello">Memuat…</h3>
+  <div id="status"></div>
+  <div id="app"></div>
+  <div id="nav">
+    <button id="navEvents" class="on">📅 Acara</button>
+    <button id="navHistory">🕘 Riwayat saya</button>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/GANTI_DENGAN_ID_DEPLOYMENT/exec';
+
+    const LABEL = { hadir: 'Hadir', terlambat: 'Terlambat', izin: 'Izin', sakit: 'Sakit' };
+    const PHASE = { upcoming: 'Belum dibuka', open: 'Check-in dibuka', ended: 'Waktu habis', closed: 'Ditutup' };
+
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+    const $ = id => document.getElementById(id);
+
+    if (!tg.initData) {
+      document.body.innerHTML = '<p style="padding:16px">Buka aplikasi ini lewat Telegram.</p>';
+      throw new Error('Tidak ada initData');
+    }
+
+    const state = { filter: 'active', page: 1, isAdmin: false, back: null, timer: null, seq: 0, busy: false };
+
+    /* ---------- Util ---------- */
+    async function api(action, payload = {}) {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari preflight CORS
+        body: JSON.stringify({ action, initData: tg.initData, ...payload })
+      });
+      const data = await res.json();
+      if (!data.ok) { const e = new Error(data.error || 'Request gagal'); e.data = data; throw e; }
+      return data;
+    }
+
+    function el(tag, cls, text) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text !== undefined) e.textContent = text;   // textContent = aman dari XSS
+      return e;
+    }
+    function btn(text, cls, fn) { const b = el('button', 'btn ' + (cls || ''), text); b.onclick = fn; return b; }
+    function field(tag, ph, attrs = {}) {
+      const f = el(tag); f.placeholder = ph || '';
+      Object.assign(f, attrs);
+      return f;
+    }
+    function labeled(text, input) {
+      const w = el('div'); w.append(el('label', '', text), input); return w;
+    }
+    function badge(status) { return el('span', 'badge b-' + status, LABEL[status] || status); }
+    function phaseBadge(p) { return el('span', 'badge p-' + p, PHASE[p] || p); }
+
+    const setStatus = m => { $('status').textContent = m || ''; };
+    const hapt = t => { try { tg.HapticFeedback.notificationOccurred(t); } catch (e) {} };
+
+    function fmtDT(x) { return new Date(x).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }); }
+    function fmtTime(x) { return new Date(x).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); }
+    function fmtRange(a, b) {
+      const s = new Date(a), e = new Date(b);
+      return s.toDateString() === e.toDateString()
+        ? s.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) +
+          ' · ' + fmtTime(s) + '–' + fmtTime(e)
+        : fmtDT(s) + ' – ' + fmtDT(e);
+    }
+    function toLocalInput(d) {
+      d = new Date(d);
+      const p = n => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+    function countsLine(c) {
+      return '✅ ' + c.hadir + ' · ⏰ ' + c.terlambat + ' · 📝 ' + c.izin + ' · 🤒 ' + c.sakit;
+    }
+
+    function cleanup() { if (state.timer) { clearInterval(state.timer); state.timer = null; } }
+    function setBack(fn) { state.back = fn; fn ? tg.BackButton.show() : tg.BackButton.hide(); }
+    tg.BackButton.onClick(() => { if (state.back) state.back(); });
+
+    function markNav(which) {
+      $('navEvents').classList.toggle('on', which === 'events');
+      $('navHistory').classList.toggle('on', which === 'history');
+    }
+    $('navEvents').onclick = () => showList();
+    $('navHistory').onclick = () => showHistory();
+
+    function getPos() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error('Perangkat tidak mendukung lokasi'));
+        navigator.geolocation.getCurrentPosition(
+          p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+          err => reject(new Error(err.code === 1 ? 'Izin lokasi ditolak. Aktifkan lokasi lalu coba lagi.' : 'Lokasi tidak bisa diambil')),
+          { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+      });
+    }
+
+    /* ---------- Daftar acara ---------- */
+    async function showList() {
+      cleanup(); setBack(null); markNav('events');
+      const my = ++state.seq;
+      setStatus('Memuat…');
+      try {
+        const d = await api('events', { filter: state.filter, page: state.page });
+        if (my !== state.seq) return;
+        state.isAdmin = d.isAdmin;
+        setStatus('');
+        const app = $('app'); app.replaceChildren();
+
+        const top = el('div', 'btns');
+        top.append(btn('📷 Scan QR check-in', '', scanQr));
+        if (d.isAdmin) top.append(btn('＋ Acara baru', 'sec', () => showForm(null)));
+        app.append(top);
+
+        const tabs = el('div', 'tabs');
+        [['active', 'Akan datang / berlangsung'], ['past', 'Selesai']].forEach(([k, t]) => {
+          const b = el('button', 'tab' + (state.filter === k ? ' on' : ''), t);
+          b.onclick = () => { state.filter = k; state.page = 1; showList(); };
+          tabs.append(b);
+        });
+        app.append(tabs);
+
+        if (!d.items.length) app.append(el('p', 'empty', 'Belum ada acara.'));
+        d.items.forEach(ev => {
+          const c = el('div', 'card click');
+          const r = el('div', 'row');
+          r.append(el('b', '', ev.name), phaseBadge(ev.phase));
+          c.append(r, el('div', 'hint', '🕒 ' + fmtRange(ev.startAt, ev.endAt)));
+          if (ev.location) c.append(el('div', 'hint', '📍 ' + ev.location));
+          if (ev.myStatus) c.append(badge(ev.myStatus));
+          if (ev.counts) c.append(el('div', 'hint', countsLine(ev.counts)));
+          c.onclick = () => showDetail(ev.id);
+          app.append(c);
+        });
+
+        const pg = el('div', 'pager');
+        const prev = btn('‹ Sebelumnya', 'sec', () => { state.page--; showList(); });
+        const next = btn('Berikutnya ›', 'sec', () => { state.page++; showList(); });
+        prev.disabled = d.page <= 1; next.disabled = d.page >= d.totalPages;
+        if (d.totalPages > 1) { pg.append(prev, el('span', 'hint', d.page + '/' + d.totalPages), next); app.append(pg); }
+      } catch (e) { if (my === state.seq) setStatus('Error: ' + e.message); }
+    }
+
+    /* ---------- Check-in ---------- */
+    function scanQr() {
+      if (!tg.showScanQrPopup) {
+        return tg.showAlert('Versi Telegram Anda belum mendukung pemindai QR. Buka acara lalu masukkan kode manual.');
+      }
+      tg.showScanQrPopup({ text: 'Arahkan kamera ke QR acara' }, text => {
+        const m = /^ABS\|([0-9a-f-]{36})\|(\d{6})$/.exec(String(text).trim());
+        if (!m) { setStatus('QR itu bukan QR absensi'); return false; }  // lanjut memindai
+        setTimeout(() => doCheckin(m[1], m[2]), 0);
+        return true;                                                     // tutup pemindai
+      });
+    }
+
+    async function doCheckin(eventId, code) {
+      if (state.busy) return;
+      state.busy = true;
+      setStatus('Memproses check-in…');
+      try {
+        let r;
+        try {
+          r = await api('checkin', { eventId, code });
+        } catch (e) {
+          if (!(e.data && e.data.needLocation)) throw e;
+          setStatus('Mengambil lokasi…');
+          const pos = await getPos();
+          r = await api('checkin', { eventId, code, lat: pos.lat, lng: pos.lng });
+        }
+        hapt('success'); setStatus('');
+        tg.showAlert((r.status === 'terlambat' ? '⏰ Tercatat TERLAMBAT' : '✅ Check-in berhasil: HADIR') +
+          ' pukul ' + fmtTime(r.time), () => showDetail(eventId));
+      } catch (e) { hapt('error'); setStatus('Error: ' + e.message); }
+      state.busy = false;
+    }
+
+    async function sendAbsence(eventId, status, note) {
+      if (state.busy) return;
+      state.busy = true;
+      try {
+        await api('absence', { eventId, status, note });
+        hapt('success');
+        await showDetail(eventId);
+      } catch (e) { hapt('error'); setStatus('Error: ' + e.message); }
+      state.busy = false;
+    }
+
+    /* ---------- Detail acara ---------- */
+    async function showDetail(id) {
+      cleanup(); setBack(showList); markNav('events');
+      const my = ++state.seq;
+      setStatus('Memuat…');
+      try {
+        const d = await api('event_get', { id });
+        if (my !== state.seq) return;
+        state.isAdmin = d.isAdmin;
+        setStatus('');
+        const ev = d.event, app = $('app');
+        app.replaceChildren();
+        app.append(el('h3', '', ev.name));
+
+        const meta = el('div', 'card');
+        meta.append(phaseBadge(ev.phase), el('div', '', '🕒 ' + fmtRange(ev.startAt, ev.endAt)));
+        if (ev.location) meta.append(el('div', '', '📍 ' + ev.location));
+        if (ev.description) meta.append(el('div', 'hint', ev.description));
+        meta.append(el('div', 'hint', 'Dianggap terlambat jika check-in setelah ' +
+          fmtTime(new Date(ev.startAt).getTime() + ev.lateAfter * 60000)));
+        if (ev.radius > 0) meta.append(el('div', 'hint', '📍 Check-in hanya dalam radius ' + ev.radius + ' m dari lokasi acara'));
+        app.append(meta);
+
+        app.append(participantBox(ev, d.mine));
+        if (d.isAdmin) app.append(adminBox(ev, d));
+      } catch (e) { if (my === state.seq) setStatus('Error: ' + e.message); }
+    }
+
+    function participantBox(ev, mine) {
+      const box = el('div', 'card');
+      if (mine && (mine.status === 'hadir' || mine.status === 'terlambat')) {
+        box.append(el('div', 'ok', '✅ Anda tercatat ' + LABEL[mine.status] + ' pukul ' + fmtTime(mine.time)));
+        return box;
+      }
+      if (mine) box.append(el('div', 'hint', 'Status Anda: ' + LABEL[mine.status] + (mine.note ? ' — ' + mine.note : '')));
+
+      if (ev.phase === 'open') {
+        const code = field('input', 'Kode 6 digit', { inputMode: 'numeric', maxLength: 6 });
+        const row = el('div', 'btns');
+        row.append(btn('Check-in', '', () => {
+          if (code.value.replace(/\D/g, '').length !== 6) return setStatus('Kode harus 6 digit');
+          doCheckin(ev.id, code.value);
+        }), btn('📷 Scan QR', 'sec', scanQr));
+        box.append(labeled('Masukkan kode dari panitia', code), row);
+      } else if (ev.phase === 'upcoming') {
+        box.append(el('div', 'hint', 'Check-in dibuka 30 menit sebelum acara dimulai.'));
+      } else {
+        box.append(el('div', 'hint', ev.phase === 'closed' ? 'Acara sudah ditutup.' : 'Waktu acara sudah berakhir.'));
+      }
+
+      if (ev.phase === 'open' || ev.phase === 'upcoming') {
+        const note = field('input', 'Alasan (opsional)', { maxLength: 200 });
+        const row = el('div', 'btns');
+        row.append(btn('📝 Izin', 'sec', () => sendAbsence(ev.id, 'izin', note.value)),
+                   btn('🤒 Sakit', 'sec', () => sendAbsence(ev.id, 'sakit', note.value)));
+        box.append(el('hr'), labeled('Tidak bisa hadir?', note), row);
+      }
+      return box;
+    }
+
+    /* ---------- Panel admin ---------- */
+    function adminBox(ev, d) {
+      const box = el('div', 'card');
+      box.append(el('b', '', 'Panel admin'), el('div', 'hint', countsLine(d.counts)));
+
+      const row = el('div', 'btns');
+      row.append(
+        btn('📲 Kode / QR', '', () => showCode(ev.id, ev.name)),
+        btn('✎ Edit', 'sec', () => showForm(ev)),
+        btn(ev.phase === 'closed' ? '🔓 Buka lagi' : '🔒 Tutup', 'sec', async () => {
+          try { await api('event_status', { id: ev.id, status: ev.phase === 'closed' ? 'open' : 'closed' }); showDetail(ev.id); }
+          catch (e) { setStatus('Error: ' + e.message); }
+        }),
+        btn('⬇ CSV', 'sec', async () => {
+          setStatus('Membuat CSV…');
+          try { await api('export', { id: ev.id }); setStatus(''); tg.showAlert('CSV dikirim ke chat bot.'); }
+          catch (e) { setStatus('Error: ' + e.message); }
+        }),
+        btn('🗑 Hapus', 'danger', () => tg.showConfirm('Hapus acara beserta seluruh data kehadirannya?', async ok => {
+          if (!ok) return;
+          try { await api('event_delete', { id: ev.id }); showList(); }
+          catch (e) { setStatus('Error: ' + e.message); }
+        })));
+      box.append(row);
+
+      box.append(el('b', '', 'Peserta (' + d.attendees.length + ')'));
+      if (!d.attendees.length) box.append(el('div', 'hint', 'Belum ada yang tercatat.'));
+      d.attendees.forEach(a => {
+        const r = el('div', 'att');
+        const head = el('div', 'row');
+        head.append(el('span', '', a.name + (a.username ? ' @' + a.username : '')), badge(a.status));
+        r.append(head, el('div', 'hint', fmtTime(a.time) + ' · ' + a.method +
+          (a.distance != null ? ' · ' + a.distance + ' m' : '') + (a.note ? ' · ' + a.note : '')));
+
+        const sel = el('select');
+        Object.keys(LABEL).forEach(k => { const o = el('option', '', LABEL[k]); o.value = k; sel.append(o); });
+        sel.value = a.status;
+        sel.onchange = async () => {
+          try {
+            await api('att_set', { eventId: ev.id, userId: a.userId, name: a.name, status: sel.value, note: a.note });
+            showDetail(ev.id);
+          } catch (e) { setStatus('Error: ' + e.message); sel.value = a.status; }
+        };
+        const del = el('button', 'link-btn', ' ✕ hapus');
+        del.onclick = () => tg.showConfirm('Hapus ' + a.name + ' dari daftar?', async ok => {
+          if (!ok) return;
+          try { await api('att_delete', { id: a.id }); showDetail(ev.id); }
+          catch (e) { setStatus('Error: ' + e.message); }
+        });
+        const act = el('div'); act.append(sel, del);
+        r.append(act);
+        box.append(r);
+      });
+
+      // Tambah / ubah manual
+      const uid = field('input', 'ID Telegram (angka)', { inputMode: 'numeric' });
+      const nm = field('input', 'Nama', { maxLength: 100 });
+      const st = el('select');
+      Object.keys(LABEL).forEach(k => { const o = el('option', '', LABEL[k]); o.value = k; st.append(o); });
+      const nt = field('input', 'Catatan (opsional)', { maxLength: 200 });
+      box.append(el('hr'), el('b', '', 'Tambah / ubah manual'), uid, nm, st, nt,
+        btn('Simpan', 'sec', async () => {
+          try {
+            await api('att_set', { eventId: ev.id, userId: uid.value.trim(), name: nm.value, status: st.value, note: nt.value });
+            hapt('success'); showDetail(ev.id);
+          } catch (e) { hapt('error'); setStatus('Error: ' + e.message); }
+        }));
+      return box;
+    }
+
+    /* ---------- Kode & QR (admin) ---------- */
+    function showCode(id, name) {
+      cleanup(); setBack(() => showDetail(id));
+      const app = $('app'); app.replaceChildren();
+      const img = el('img', 'qr'); img.alt = 'QR absensi';
+      const codeEl = el('div', 'bigcode', '······');
+      const cd = el('div', 'hint center', '');
+      app.append(el('h3', '', name), img, codeEl, cd,
+        el('p', 'hint center', 'Tampilkan layar ini ke peserta. Kode berganti otomatis.'));
+
+      let exp = 0, fetching = false;
+      async function refresh() {
+        if (fetching) return;
+        fetching = true;
+        try {
+          const d = await api('code', { id });
+          exp = Date.now() + d.expiresIn * 1000;
+          codeEl.textContent = d.code.slice(0, 3) + ' ' + d.code.slice(3);
+          const q = qrcode(0, 'M');
+          q.addData('ABS|' + id + '|' + d.code);
+          q.make();
+          img.src = q.createDataURL(8, 4);
+          setStatus('');
+        } catch (e) {
+          exp = Date.now() + 5000;          // jangan menembak ulang tiap detik saat error
+          setStatus('Error: ' + e.message);
+        }
+        fetching = false;
+      }
+      state.timer = setInterval(() => {
+        const left = Math.ceil((exp - Date.now()) / 1000);
+        if (left <= 0) refresh(); else cd.textContent = 'Kode berganti dalam ' + left + ' dtk';
+      }, 1000);
+      refresh();
+    }
+
+    /* ---------- Form acara (admin) ---------- */
+    function showForm(ev) {
+      cleanup(); setBack(ev ? () => showDetail(ev.id) : showList);
+      const app = $('app'); app.replaceChildren();
+      app.append(el('h3', '', ev ? 'Edit acara' : 'Acara baru'));
+
+      const start = new Date(); start.setMinutes(0, 0, 0); start.setHours(start.getHours() + 1);
+      const name = field('input', 'Nama acara / kegiatan', { maxLength: 100, value: ev ? ev.name : '' });
+      const desc = field('textarea', 'Deskripsi (opsional)', { rows: 2, maxLength: 300, value: ev ? ev.description : '' });
+      const loc = field('input', 'Lokasi (opsional)', { maxLength: 100, value: ev ? ev.location : '' });
+      const s = field('input', '', { type: 'datetime-local', value: toLocalInput(ev ? ev.startAt : start) });
+      const e = field('input', '', { type: 'datetime-local', value: toLocalInput(ev ? ev.endAt : start.getTime() + 2 * 3600000) });
+      const late = field('input', '', { type: 'number', min: 0, max: 600, value: ev ? ev.lateAfter : 15 });
+      const lat = field('input', 'Lintang (lat)', { inputMode: 'decimal', value: ev && ev.lat != null ? ev.lat : '' });
+      const lng = field('input', 'Bujur (lng)', { inputMode: 'decimal', value: ev && ev.lng != null ? ev.lng : '' });
+      const rad = field('input', '', { type: 'number', min: 0, max: 5000, value: ev ? ev.radius : 0 });
+
+      app.append(name, desc, loc, labeled('Mulai', s), labeled('Selesai', e),
+        labeled('Dianggap terlambat setelah (menit dari waktu mulai)', late),
+        el('hr'), el('b', '', 'Batasi area (opsional)'),
+        el('div', 'hint', 'Isi radius lebih dari 0 agar peserta hanya bisa check-in di sekitar titik ini.'),
+        btn('📍 Pakai lokasi saya sekarang', 'sec', async () => {
+          try { setStatus('Mengambil lokasi…'); const p = await getPos();
+                lat.value = p.lat.toFixed(6); lng.value = p.lng.toFixed(6); setStatus(''); }
+          catch (err) { setStatus('Error: ' + err.message); }
+        }), lat, lng, labeled('Radius (meter, 0 = tanpa batas area)', rad));
+
+      app.append(btn(ev ? 'Simpan perubahan' : 'Buat acara', '', async () => {
+        if (!name.value.trim()) return setStatus('Nama acara wajib diisi');
+        if (!s.value || !e.value) return setStatus('Waktu mulai dan selesai wajib diisi');
+        if (state.busy) return;
+        state.busy = true;
+        try {
+          const r = await api('event_save', {
+            id: ev ? ev.id : '', name: name.value, description: desc.value, location: loc.value,
+            startAt: new Date(s.value).toISOString(), endAt: new Date(e.value).toISOString(),
+            lateAfter: late.value, lat: lat.value, lng: lng.value, radius: rad.value
+          });
+          hapt('success'); setStatus('');
+          state.busy = false;
+          showDetail(r.id);
+        } catch (err) { hapt('error'); setStatus('Error: ' + err.message); state.busy = false; }
+      }));
+    }
+
+    /* ---------- Riwayat saya ---------- */
+    async function showHistory() {
+      cleanup(); setBack(null); markNav('history');
+      const my = ++state.seq;
+      setStatus('Memuat…');
+      try {
+        const d = await api('history');
+        if (my !== state.seq) return;
+        setStatus('');
+        const app = $('app'); app.replaceChildren();
+        app.append(el('h3', '', 'Riwayat kehadiran saya'), el('div', 'hint', countsLine(d.counts)));
+        if (!d.items.length) app.append(el('p', 'empty', 'Belum ada riwayat.'));
+        d.items.forEach(it => {
+          const c = el('div', 'card click');
+          const r = el('div', 'row');
+          r.append(el('b', '', it.event), badge(it.status));
+          c.append(r, el('div', 'hint', fmtDT(it.time) + (it.note ? ' · ' + it.note : '')));
+          if (it.startAt) c.onclick = () => showDetail(it.eventId);
+          app.append(c);
+        });
+      } catch (e) { if (my === state.seq) setStatus('Error: ' + e.message); }
+    }
+
+    /* ---------- Init ---------- */
+    const u = tg.initDataUnsafe.user;
+    $('hello').textContent = 'Halo, ' + (u ? u.first_name : 'pengguna') + '!';
+    showList();
+  </script>
+</body>
+</html>
