@@ -86,16 +86,24 @@
     const state = { filter: 'active', page: 1, isAdmin: false, back: null, timer: null, seq: 0, busy: false };
 
     /* ---------- Util ---------- */
-    async function api(action, payload = {}) {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari preflight CORS
-        body: JSON.stringify({ action, initData: tg.initData, ...payload })
-      });
-      const data = await res.json();
-      if (!data.ok) { const e = new Error(data.error || 'Request gagal'); e.data = data; throw e; }
-      return data;
-    }
+async function api(action, payload = {}) {
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, initData: tg.initData, ...payload })
+    });
+  } catch (err) {
+    throw new Error('Tidak bisa menjangkau server. Periksa API_URL (harus berakhiran /exec).');
+  }
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch (err) { throw new Error('Server tidak membalas JSON (HTTP ' + res.status + ').'); }
+  if (!data.ok) { const e = new Error(data.error || 'Request gagal'); e.data = data; throw e; }
+  return data;
+}
 
     function el(tag, cls, text) {
       const e = document.createElement(tag);
