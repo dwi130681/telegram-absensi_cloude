@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
 <title>Absensi Pro</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
 :root{color-scheme:light dark;--bg:var(--tg-theme-bg-color,#f2f6f7);--card:var(--tg-theme-secondary-bg-color,#fff);--tx:var(--tg-theme-text-color,#13222b);--mut:var(--tg-theme-hint-color,#6b7a85);
---pri:#0b7a75;--pt:#fff;--ok:#1e9e5a;--warn:#d9820b;--err:#d63c3c;--info:#2b6fd1;--bd:rgba(110,125,135,.22);--r:14px;
+--pri:#0b7a75;--pt:#fff;--ok:#1e9e5a;--warn:#d9820b;--err:#d63c3c;--info:#2b6fd1;--bd:rgba(110,125,135,.22);--r:16px;
 --font:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",sans-serif}
 @media(prefers-color-scheme:dark){:root:not(.tg){--bg:#0e1519;--card:#16222a;--tx:#e8eef1;--mut:#8b9ba6;--pri:#2bb3ab;--pt:#06201f}}
 :root[data-mode=light]{color-scheme:light;--bg:#f2f6f7;--card:#fff;--tx:#13222b;--mut:#6b7a85}
@@ -35,7 +36,10 @@ nav button{flex:none;flex-direction:row;font-size:14px;gap:10px;padding:10px 12p
 main{padding:28px 32px 40px}}
 .card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:12px;border:1px solid var(--bd)}
 .card.click{cursor:pointer;transition:border-color .15s}.card.click:hover{border-color:var(--pri)}
-.hero{border-left:4px solid var(--pri)}
+.hero{border-left:4px solid var(--pri);background:linear-gradient(135deg,color-mix(in srgb,var(--pri) 9%,var(--card)),var(--card) 70%)}
+.nudge{font-size:15px;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,var(--pri) 10%,transparent)}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;margin:4px 6px 4px 0;background:color-mix(in srgb,var(--pri) 14%,transparent);color:var(--pri)}
+.card{box-shadow:0 1px 2px rgba(20,40,50,.04)}.btn{transition:transform .12s,border-color .15s}.btn:active{transform:scale(.97)}
 .grid2{display:grid;gap:12px}.grid3{display:grid;gap:12px}
 @media(min-width:760px){.grid2{grid-template-columns:1.4fr 1fr}.grid3{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}}
 .row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.gap{justify-content:flex-start}
@@ -67,6 +71,10 @@ label{font-size:13px;color:var(--mut)}
 .demo{background:var(--warn);color:#fff;padding:6px 12px;font-size:13px;display:flex;justify-content:center;gap:10px;align-items:center}.demo button{border:1px solid #fff;background:none;color:#fff;border-radius:8px;padding:2px 10px;cursor:pointer}
 details summary{cursor:pointer;color:var(--pri);margin:6px 0}
 .empty{text-align:center;color:var(--mut);padding:28px 8px}
+.card{box-shadow:0 1px 2px rgba(19,34,43,.05)}.hero{background:linear-gradient(135deg,color-mix(in srgb,var(--pri) 9%,var(--card)),var(--card))}
+.btn{transition:transform .08s,border-color .15s}.btn:active{transform:scale(.97)}
+:root[data-style=ramah]{--r:20px;--font:"Nunito","Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+:root[data-style=ramah] .btn,:root[data-style=ramah] .tab{border-radius:999px}:root[data-style=ramah] input,:root[data-style=ramah] select,:root[data-style=ramah] textarea{border-radius:14px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -81,23 +89,25 @@ details summary{cursor:pointer;color:var(--pri);margin:6px 0}
 <script>
 const API_URL='https://script.google.com/macros/s/AKfycbzkfOBvgwJFMP-ReYjvXuVZ6VjFQrSxVIEalZar6u5GklPLRzPYKnQjMk13vixR4xcA/exec';
 const tg=(window.Telegram&&Telegram.WebApp)||{};
-const DEMO=!tg.initData;
-if(!DEMO){document.documentElement.classList.add('tg');try{tg.ready();tg.expand()}catch(e){}}
+const UNSET=/GANTI_DENGAN/.test(API_URL);          // API_URL belum diisi = mode pratinjau
+const DEMO=!tg.initData&&UNSET;                    // banner pratinjau hanya muncul di sini
+const OUTSIDE=!tg.initData&&!UNSET;                // produksi, tapi dibuka di luar Telegram
+if(tg.initData){document.documentElement.classList.add('tg');try{tg.ready();tg.expand();tg.disableVerticalSwipes&&tg.disableVerticalSwipes()}catch(e){}}
 const $=id=>document.getElementById(id);
 const L={hadir:'Hadir',terlambat:'Terlambat',izin:'Izin',sakit:'Sakit',alpa:'Alpa',belum:'Belum'};
 const PH={upcoming:'Belum dibuka',open:'Check-in dibuka',ended:'Waktu habis',closed:'Ditutup'};
 const SET=['hadir','terlambat','izin','sakit'];
-const ACT={'acara.buat':'Acara dibuat','acara.ubah':'Acara diubah','acara.hapus':'Acara dihapus','acara.tutup':'Acara ditutup','acara.buka':'Acara dibuka','hadir.ubah':'Status diubah','hadir.hapus':'Catatan dihapus','grup.simpan':'Grup disimpan','grup.hapus':'Grup dihapus','anggota.tambah':'Anggota ditambah','anggota.hapus':'Anggota dihapus','ekspor.acara':'Ekspor acara','ekspor.rekap':'Ekspor rekap'};
+const ACT={'laporan.pdf':'Laporan PDF','acara.buat':'Acara dibuat','acara.ubah':'Acara diubah','acara.hapus':'Acara dihapus','acara.tutup':'Acara ditutup','acara.buka':'Acara dibuka','hadir.ubah':'Status diubah','hadir.hapus':'Catatan dihapus','grup.simpan':'Grup disimpan','grup.hapus':'Grup dihapus','anggota.tambah':'Anggota ditambah','anggota.hapus':'Anggota dihapus','ekspor.acara':'Ekspor acara','ekspor.rekap':'Ekspor rekap'};
 const S={view:'home',admin:false,back:null,timer:null,seq:0,busy:false,filter:'active',page:1,q:'',rg:'',rm:''};
 
 /* ---------- tema ---------- */
-const TH={mode:'auto',acc:'',fs:15,dense:0};
+const TH={mode:'auto',acc:'',fs:15,dense:0,style:'pro'};
 const ACC=[['','Teal'],['#2b6fd1','Biru'],['#7b4cc4','Ungu'],['#c8620a','Oranye'],['#c2386b','Mawar'],['#2f8f3e','Hijau']];
 function loadTh(){try{Object.assign(TH,JSON.parse(localStorage.getItem('abs_th')||'{}'))}catch(e){}}
 function applyTh(){const r=document.documentElement;
   if(TH.mode==='auto')r.removeAttribute('data-mode');else r.dataset.mode=TH.mode;
   TH.acc?r.style.setProperty('--pri',TH.acc):r.style.removeProperty('--pri');
-  r.style.setProperty('--fs',TH.fs+'px');r.dataset.dense=TH.dense;
+  r.style.setProperty('--fs',TH.fs+'px');r.dataset.dense=TH.dense;r.dataset.style=TH.style;
   try{localStorage.setItem('abs_th',JSON.stringify(TH))}catch(e){}
   try{const c=getComputedStyle(document.body).backgroundColor.match(/\d+/g).slice(0,3).map(n=>(+n).toString(16).padStart(2,'0')).join('');tg.setHeaderColor('#'+c);tg.setBackgroundColor('#'+c)}catch(e){}}
 
@@ -116,10 +126,19 @@ const tm=x=>new Date(x).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-dig
 const rng=(a,b)=>{const s=new Date(a),e=new Date(b);return s.toDateString()===e.toDateString()?s.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'})+', '+tm(s)+'–'+tm(e):dt(s)+' – '+dt(e)};
 const loc=d=>{d=new Date(d);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())};
 const cnt=c=>'✅ '+c.hadir+'  ⏰ '+c.terlambat+'  📝 '+c.izin+'  🤒 '+c.sakit+(c.alpa?'  ❌ '+c.alpa:'')+(c.belum?'  ⏳ '+c.belum:'');
+const rel=t=>{const m=Math.round((new Date(t)-Date.now())/60000);if(m<=0)return 'sedang berlangsung';if(m<60)return 'mulai '+m+' menit lagi';if(m<1440){const j=Math.floor(m/60),k=m%60;return 'mulai '+j+' jam'+(k?' '+k+' menit':'')+' lagi'}const d=Math.round(m/1440);return d===1?'mulai besok':'mulai '+d+' hari lagi'};
+const nudge=(c,n)=>{
+  if(n&&(n.myStatus==='hadir'||n.myStatus==='terlambat'))return 'Kehadiranmu di “'+n.name+'” sudah tercatat. Terima kasih sudah hadir! 🙌';
+  if(n&&n.phase==='open'&&!n.myStatus)return 'Check-in “'+n.name+'” sudah dibuka. Tinggal satu langkah lagi 😊';
+  if(c.streak>=5)return 'Wow, '+c.streak+' kehadiran beruntun. Konsistensimu luar biasa! 🔥';
+  if(c.total>=3&&c.pct<60)return 'Tidak apa-apa kalau sempat terlewat. Yuk mulai lagi dari acara berikutnya 💪';
+  if(n)return 'Siap-siap ya, “'+n.name+'” '+rel(n.startAt)+'.';
+  return 'Hari ini belum ada jadwal. Nikmati waktumu ☕'};
+async function sendPdf(a,p){if(S.busy)return;S.busy=true;try{await api(a,p||{});hap('success');info('PDF sudah dikirim ke chat bot. Cek Telegram-mu 📄')}catch(e){hap('error');toast(e.message,'err')}S.busy=false}
 function toast(m,t){const e=h('div','t '+(t||''),m);$('toast').append(e);setTimeout(()=>e.remove(),3400)}
 function ask(m,cb){if(!DEMO&&tg.showConfirm)tg.showConfirm(m,cb);else cb(confirm(m))}
 function info(m,cb){if(!DEMO&&tg.showAlert)tg.showAlert(m,cb);else{toast(m,'ok');cb&&cb()}}
-function clr(){if(S.timer){clearInterval(S.timer);S.timer=null}}
+function clr(){if(S.timer){clearInterval(S.timer);S.timer=null}if(S.wl){try{S.wl.release()}catch(e){}S.wl=null}}
 function title(t){$('ttl').textContent=t;$('bk').hidden=!S.back;try{S.back?tg.BackButton.show():tg.BackButton.hide()}catch(e){}}
 $('bk').onclick=()=>S.back&&S.back();
 try{tg.BackButton.onClick(()=>S.back&&S.back())}catch(e){}
@@ -128,6 +147,7 @@ function pos(){return new Promise((ok,no)=>{if(!navigator.geolocation)return no(
 
 async function api(a,p={}){
   if(DEMO)return mock(a,p);
+  if(/GANTI_DENGAN/.test(API_URL))throw new Error('API_URL belum diisi. Tempel URL Web App hasil Deploy di bagian atas script.');
   if(!navigator.onLine)throw new Error('Kamu sedang offline. Sambungkan internet lalu coba lagi.');
   let r;try{r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:a,initData:tg.initData,...p})})}catch(e){throw new Error('Tidak bisa menjangkau server. Periksa koneksi dan API_URL.')}
   let d;try{d=JSON.parse(await r.text())}catch(e){throw new Error('Server tidak membalas dengan benar (HTTP '+r.status+').')}
@@ -135,7 +155,7 @@ async function api(a,p={}){
 
 /* ---------- navigasi ---------- */
 const NAV=[['home','🏠','Beranda'],['events','📅','Acara'],['history','🕘','Riwayat'],['groups','👥','Grup',1],['recap','📊','Rekap',1],['log','🛡️','Log',1]];
-function nav(){const n=$('nav');n.replaceChildren(h('div','brand','Absensi Pro'));NAV.filter(x=>!x[3]||S.admin).forEach(([k,i,t])=>n.append(h('button',S.view===k?'on':'',[h('i','',i),t],{onclick:()=>go(k)})))}
+function nav(){const n=$('nav');n.replaceChildren(h('div','brand','Absensi Pro'));NAV.filter(x=>!x[3]||S.admin).forEach(([k,i,t])=>{const b=h('button',S.view===k?'on':'',[h('i','',i),t],{onclick:()=>go(k)});if(S.view===k)b.setAttribute('aria-current','page');n.append(b)})}
 const VIEWS={};
 function go(v){S.view=v;S.back=null;nav();run(VIEWS[v])}
 function open(id){run(detail,id)}
@@ -148,12 +168,12 @@ VIEWS.home=async my=>{
   title((hr<11?'Selamat pagi':hr<15?'Selamat siang':hr<18?'Selamat sore':'Selamat malam')+', '+u.first_name);
   const v=V(),c=d.me.counts,n=d.me.next,g=h('div','grid2');
   const nx=h('div','card hero');
-  if(n)nx.append(h('div','muted','Acara berikutnya'),h('h2','',n.name),h('div','muted','🕒 '+rng(n.startAt,n.endAt)+(n.location?'  📍 '+n.location:'')),h('div','',[ph(n.phase),n.myStatus&&bd(n.myStatus)]),
+  if(n)nx.append(h('div','muted','Acara berikutnya'),h('h2','',n.name),h('span','chip','⏳ '+(n.phase==='open'?'Check-in dibuka · ':'')+rel(n.startAt)),h('div','muted','🕒 '+rng(n.startAt,n.endAt)+(n.location?'  📍 '+n.location:'')),h('div','',[ph(n.phase),n.myStatus&&bd(n.myStatus)]),
     h('div','btns',[B(n.phase==='open'&&!n.myStatus?'Check-in sekarang':'Lihat detail','pri',()=>open(n.id))]));
   else nx.append(h('h2','','Belum ada acara terdekat'),h('p','muted','Jadwal kosong dulu. Nikmati waktu luangmu ☕'),S.admin&&h('div','btns',[B('Buat acara','pri',()=>form())]));
   const me=h('div','card row');const ring=h('div','ring',[h('b','',c.total?c.pct+'%':'–')]);ring.style.setProperty('--p',c.pct||0);
   me.append(ring,h('div','',[h('b','','Kehadiranmu'),h('div','muted',c.total?cnt(c):'Belum ada riwayat'),c.streak>1&&h('div','ok','🔥 '+c.streak+' kehadiran beruntun')]));
-  g.append(nx,me);v.append(g);
+  g.append(nx,me);v.append(h('p','nudge',nudge(c,n)),g);
   d.insights.forEach(i=>v.append(h('div','tip '+i.tone,i.text)));
   if(d.admin){const a=d.admin;
     v.append(h('h3','','Ringkasan admin'),h('div','stats',[['Berlangsung',a.openNow],['Akan datang',a.upcoming],['Grup',a.groups],['Rata-rata bulan ini',a.avg==null?'–':a.avg+'%']].map(([t,x])=>h('div','card stat',[h('b','',x),h('span','muted',t)]))));
@@ -170,15 +190,16 @@ function evCard(ev){
     h('div','muted','🕒 '+rng(ev.startAt,ev.endAt)),ev.location&&h('div','muted','📍 '+ev.location),ev.myStatus&&bd(ev.myStatus),ev.counts&&h('div','muted',cnt(ev.counts))],{onclick:()=>open(ev.id)});return c}
 let st;
 VIEWS.events=async my=>{
-  title('Acara');const d=await api('events',{filter:S.filter,page:S.page,q:S.q});if(my!==S.seq)return;S.admin=d.isAdmin;nav();
-  const v=V(),q=fld('input','Cari nama acara atau lokasi…',{type:'search',value:S.q});
-  q.oninput=()=>{clearTimeout(st);st=setTimeout(()=>{S.q=q.value.trim();S.page=1;run(VIEWS.events)},450)};
-  v.append(h('div','row',[h('div','btns',[B('📷 Scan QR','pri',scan),S.admin&&B('＋ Acara baru','',()=>form())]),]),q);
-  const t=h('div','tabs');[['active','Akan datang'],['past','Selesai']].forEach(([k,x])=>t.append(h('button','tab'+(S.filter===k?' on':''),x,{onclick:()=>{S.filter=k;S.page=1;run(VIEWS.events)}})));v.append(t);
-  if(!d.items.length)v.append(h('div','empty',S.q?'Tidak ada acara yang cocok dengan pencarianmu.':S.filter==='past'?'Belum ada acara yang selesai.':'Belum ada acara. '+(S.admin?'Tekan “Acara baru” untuk memulai.':'Tunggu info dari panitia ya.')));
-  const g=h('div','grid3');d.items.forEach(e=>g.append(evCard(e)));v.append(g);
-  if(d.totalPages>1)v.append(h('div','row',[B('‹ Sebelumnya','',()=>{S.page--;run(VIEWS.events)},),h('span','muted',d.page+'/'+d.totalPages),B('Berikutnya ›','',()=>{S.page++;run(VIEWS.events)})]));
-  v.querySelectorAll('.row .btn').forEach(b=>{if(b.textContent.startsWith('‹'))b.disabled=d.page<=1;if(b.textContent.startsWith('Berikut'))b.disabled=d.page>=d.totalPages});
+  title('Acara');const d0=await api('events',{filter:S.filter,page:S.page,q:S.q});if(my!==S.seq)return;S.admin=d0.isAdmin;nav();
+  const v=V(),q=fld('input','Cari nama acara atau lokasi…',{type:'search',value:S.q}),list=h('div');q.setAttribute('aria-label','Cari acara');
+  const draw=d=>{list.replaceChildren();
+    if(!d.items.length)list.append(h('div','empty',S.q?'Tidak ada acara yang cocok dengan pencarianmu.':S.filter==='past'?'Belum ada acara yang selesai.':'Belum ada acara. '+(S.admin?'Tekan “Acara baru” untuk memulai.':'Tunggu info dari panitia ya.')));
+    const g=h('div','grid3');d.items.forEach(e=>g.append(evCard(e)));list.append(g);
+    if(d.totalPages>1){const pv=B('‹ Sebelumnya','',()=>{S.page--;load()}),nx=B('Berikutnya ›','',()=>{S.page++;load()});pv.disabled=d.page<=1;nx.disabled=d.page>=d.totalPages;list.append(h('div','row',[pv,h('span','muted',d.page+'/'+d.totalPages),nx]))}};
+  let rq=0;const load=async()=>{const k=++rq;list.style.opacity='.5';try{const d=await api('events',{filter:S.filter,page:S.page,q:S.q});if(k!==rq||my!==S.seq)return;draw(d)}catch(e){toast(e.message,'err')}list.style.opacity=''};
+  q.oninput=()=>{clearTimeout(st);st=setTimeout(()=>{S.q=q.value.trim();S.page=1;load()},400)};
+  v.append(h('div','row',[h('div','btns',[B('📷 Scan QR','pri',scan),S.admin&&B('＋ Acara baru','',()=>form())])]),q);
+  const t=h('div','tabs');[['active','Akan datang'],['past','Selesai']].forEach(([k,x])=>t.append(h('button','tab'+(S.filter===k?' on':''),x,{onclick:()=>{S.filter=k;S.page=1;run(VIEWS.events)}})));v.append(t,list);draw(d0)
 };
 
 /* ---------- Check-in ---------- */
@@ -187,11 +208,11 @@ function scan(){
   tg.showScanQrPopup({text:'Arahkan kamera ke QR acara'},t=>{const m=/^ABS\|([0-9a-f-]{36})\|(\d{6})$/.exec(String(t).trim());if(!m){toast('QR itu bukan QR absensi','err');return false}setTimeout(()=>checkin(m[1],m[2]),0);return true});
 }
 async function checkin(id,code){
-  if(S.busy)return;S.busy=true;
+  if(S.busy)return false;S.busy=true;let done=false;
   try{let r;try{r=await api('checkin',{eventId:id,code})}catch(e){if(!(e.data&&e.data.needLocation))throw e;toast('Mengambil lokasimu…');const p=await pos();r=await api('checkin',{eventId:id,code,lat:p.lat,lng:p.lng})}
-    hap('success');info((r.status==='terlambat'?'⏰ ':'✅ ')+r.msg+' ('+tm(r.time)+')',()=>open(id))}
-  catch(e){hap('error');toast(e.message,'err')}S.busy=false}
-async function absence(id,status,note){if(S.busy)return;S.busy=true;try{await api('absence',{eventId:id,status,note});hap('success');toast('Tercatat sebagai '+L[status].toLowerCase(),'ok');open(id)}catch(e){hap('error');toast(e.message,'err')}S.busy=false}
+    hap('success');done=true;info((r.status==='terlambat'?'⏰ ':'✅ ')+r.msg+' ('+tm(r.time)+')',()=>open(id))}
+  catch(e){hap('error');toast(e.message,'err')}S.busy=false;return done}
+async function absence(id,status,note){if(S.busy)return;S.busy=true;try{await api('absence',{eventId:id,status,note});hap('success');toast(status==='sakit'?'Tercatat sakit. Semoga lekas pulih ya 💛':'Oke, kamu tercatat izin. Terima kasih sudah mengabari 🙏','ok');open(id)}catch(e){hap('error');toast(e.message,'err')}S.busy=false}
 
 /* ---------- Detail ---------- */
 async function detail(my,id){
@@ -205,7 +226,7 @@ async function detail(my,id){
     if(m&&m.status==='alpa')bx.append(h('b','err','❌ Tidak ada catatan kehadiranmu (alpa). Hubungi panitia bila ini keliru.'));
     else if(m)bx.append(h('p','muted','Status kamu: '+L[m.status]+(m.note?' — '+m.note:'')));
     if(ev.phase==='open'){const c=fld('input','000000',{inputMode:'numeric',maxLength:6,autocomplete:'one-time-code'});
-      c.oninput=()=>{c.value=c.value.replace(/\D/g,'');if(c.value.length===6)checkin(ev.id,c.value)};
+      c.oninput=()=>{c.value=c.value.replace(/\D/g,'');if(c.value.length===6)checkin(ev.id,c.value).then(k=>{if(!k){c.value='';c.focus()}})};
       bx.append(lab('Masukkan kode dari panitia (otomatis terkirim setelah 6 digit)',c),h('div','btns',[B('📷 Scan QR','pri',scan)]))}
     else if(ev.phase==='upcoming')bx.append(h('p','muted','Check-in dibuka 30 menit sebelum acara dimulai.'));
     else bx.append(h('p','muted',ev.phase==='closed'?'Acara sudah ditutup.':'Waktu acara sudah berakhir.'));
@@ -220,9 +241,9 @@ function adminBox(ev,d){
   const set=async(uid,nm,s,note)=>{try{await api('att_set',{eventId:ev.id,userId:uid,name:nm,status:s,note:note||''});toast('Status diperbarui','ok');open(ev.id)}catch(e){toast(e.message,'err')}};
   bx.append(h('div','row',[h('b','','Panel admin'),h('span','muted',tot?Math.round(got/tot*100)+'% hadir':'')]),h('div','bar',[h('i','',null,{})]),h('div','muted',cnt(c)));
   bx.querySelector('.bar i').style.width=(tot?got/tot*100:0)+'%';
-  bx.append(h('div','btns',[B('📲 Kode / QR','pri',()=>codeView(ev)),B('✎ Edit','',()=>form(ev)),
-    B(ev.phase==='closed'?'🔓 Buka lagi':'🔒 Tutup','',async()=>{try{await api('event_status',{id:ev.id,status:ev.phase==='closed'?'open':'closed'});open(ev.id)}catch(e){toast(e.message,'err')}}),
-    B('⬇ CSV','',async()=>{try{await api('export',{id:ev.id});info('CSV dikirim ke chat bot.')}catch(e){toast(e.message,'err')}}),B('🗑 Hapus','dng',()=>delAsk(ev))]));
+  bx.append(h('div','btns',[B('📲 Kode / QR','pri',()=>codeView(ev)),B('📄 Laporan','',()=>run(report,ev.id)),B('✎ Edit','',()=>form(ev)),
+    (ev.phase==='closed'&&new Date(ev.endAt)<Date.now())?null:B(ev.phase==='closed'?'🔓 Buka lagi':'🔒 Tutup','',async()=>{try{await api('event_status',{id:ev.id,status:ev.phase==='closed'?'open':'closed'});open(ev.id)}catch(e){toast(e.message,'err')}}),
+    B('⬇ CSV','',async()=>{try{await api('export',{id:ev.id});info('CSV dikirim ke chat bot.')}catch(e){toast(e.message,'err')}}),B('📑 PDF','',()=>sendPdf('event_pdf',{id:ev.id})),B('🗑 Hapus','dng',()=>delAsk(ev))]));
   bx.append(h('h3','','Tercatat ('+d.attendees.length+')'));if(!d.attendees.length)bx.append(h('p','muted','Belum ada yang check-in.'));
   d.attendees.forEach(a=>{const s=sel(SET.map(k=>[k,L[k]]),a.status);s.onchange=()=>set(a.userId,a.name,s.value,a.note);
     const x=h('button','btn','✕ hapus',{onclick:()=>ask('Hapus '+a.name+' dari daftar?',async ok=>{if(!ok)return;try{await api('att_delete',{id:a.id});open(ev.id)}catch(e){toast(e.message,'err')}})});
@@ -232,16 +253,33 @@ function adminBox(ev,d){
   const u=fld('input','ID Telegram (angka)',{inputMode:'numeric'}),n=fld('input','Nama',{maxLength:100}),s=sel(SET.map(k=>[k,L[k]]),'hadir'),t=fld('input','Catatan (opsional)',{maxLength:200});
   bx.append(h('details','',[h('summary','','Tambah atau ubah manual'),u,n,s,t,B('Simpan','pri',()=>set(u.value.trim(),n.value,s.value,t.value))]));return bx}
 
+/* ---------- Laporan acara ---------- */
+async function report(my,id){
+  const d=await api('event_report',{id});if(my!==S.seq)return;S.back=()=>open(id);title('Laporan acara');
+  const ev=d.event,c=d.counts,v=V(),ring=h('div','ring',[h('b','',d.expected?d.rate+'%':'–')]);ring.style.setProperty('--p',d.rate||0);
+  v.append(h('div','card hero',[h('h2','',ev.name),h('div','muted','🕒 '+rng(ev.startAt,ev.endAt)+(ev.location?'  📍 '+ev.location:'')),ev.groupName&&h('span','bd grp','👥 '+ev.groupName),
+    h('div','row gap',[ring,h('div','',[h('b','',d.attended+' dari '+d.expected+' hadir'),h('div','muted',cnt(c)),d.median!=null&&h('div','muted','⏱ Rata-rata check-in: '+(d.median>0?d.median+' menit setelah mulai':'sebelum acara mulai')),d.prev!=null&&h('div','muted','📈 Rata-rata acara sebelumnya: '+d.prev+'%')])])]));
+  d.insights.forEach(i=>v.append(h('div','tip '+i.tone,i.text)));
+  v.append(h('div','btns',[B('📑 Kirim PDF ke chat','pri',()=>sendPdf('event_pdf',{id})),B('⬇ CSV','',async()=>{try{await api('export',{id});info('CSV dikirim ke chat bot.')}catch(e){toast(e.message,'err')}}),B('‹ Detail acara','',()=>open(id))]));
+  const a=h('div','card',[h('h3','','Tercatat ('+d.attendees.length+')')]);
+  if(!d.attendees.length)a.append(h('p','muted','Belum ada yang check-in.'));
+  d.attendees.forEach(x=>a.append(h('div','att',[h('div','row',[h('span','',x.name+(x.username?' @'+x.username:'')),bd(x.status)]),h('div','muted',tm(x.time)+(x.delay!=null?' · '+(x.delay<=0?'tepat waktu':'+'+x.delay+' menit'):'')+' · '+x.method+(x.note?' · '+x.note:''))])));
+  v.append(a);
+  if(d.missing.length){const m=h('div','card',[h('h3','',(d.missing[0].label==='alpa'?'Tidak hadir (alpa)':'Belum tercatat')+' ('+d.missing.length+')')]);d.missing.forEach(x=>m.append(h('div','att row',[h('span','',x.name),bd(x.label)])));v.append(m)}
+}
+
 /* ---------- Kode / QR ---------- */
 function codeView(ev){
-  clr();S.back=()=>open(ev.id);title(ev.name);const v=V(),img=h('img','qr',null,{alt:'QR absensi'}),ce=h('div','code','······'),cd=h('p','muted',''),w=h('div','card',[img,ce,cd,h('p','muted','Tampilkan layar ini ke peserta. Kode berganti otomatis tiap menit agar tidak bisa dibagikan.'),
+  clr();S.back=()=>open(ev.id);title(ev.name);const v=V(),img=h('img','qr',null,{alt:'QR absensi'}),ce=h('div','code','······'),cd=h('p','muted',''),lv=h('p','muted',''),w=h('div','card',[img,ce,cd,lv,h('p','muted','Tampilkan layar ini ke peserta. Kode berganti otomatis tiap menit agar tidak bisa dibagikan.'),
     h('div','btns',[B('⛶ Layar penuh','',()=>{const e=document.documentElement;(e.requestFullscreen||(()=>0)).call(e)})])]);v.append(w);
   let exp=0,bz=false;const rf=async()=>{if(bz)return;bz=true;try{const d=await api('code',{id:ev.id});exp=Date.now()+d.expiresIn*1000;ce.textContent=d.code.slice(0,3)+' '+d.code.slice(3);const q=qrcode(0,'M');q.addData('ABS|'+ev.id+'|'+d.code);q.make();img.src=q.createDataURL(8,4)}catch(e){exp=Date.now()+5000;toast(e.message,'err')}bz=false};
-  S.timer=setInterval(()=>{const l=Math.ceil((exp-Date.now())/1000);if(l<=0)rf();else cd.textContent='Berganti dalam '+l+' detik'},1000);rf()}
+  const live=async()=>{try{const d=await api('event_get',{id:ev.id});const got=d.counts.hadir+d.counts.terlambat;lv.textContent='Sudah check-in: '+got+(d.missing?' dari '+(d.attendees.length+d.missing.length):'')}catch(e){}};
+  try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(x=>{S.wl=x}).catch(()=>{})}catch(e){}
+  let n=0;S.timer=setInterval(()=>{n++;const l=Math.ceil((exp-Date.now())/1000);if(l<=0)rf();else cd.textContent='Berganti dalam '+l+' detik';if(n%15===0)live()},1000);rf();live()}
 
 /* ---------- Form acara ---------- */
 async function form(ev){
-  clr();const my=++S.seq;S.back=ev?()=>open(ev.id):()=>go('events');title(ev?'Edit acara':'Acara baru');
+  clr();const my=++S.seq;S.cur=[async()=>form(ev),[]];S.back=ev?()=>open(ev.id):()=>go('events');title(ev?'Edit acara':'Acara baru');
   let gs;try{gs=(await api('group_list')).items}catch(e){return toast(e.message,'err')}if(my!==S.seq)return;
   const v=V(),s0=new Date(),tip=h('div','tip');tip.hidden=true;s0.setMinutes(0,0,0);s0.setHours(s0.getHours()+1);
   const nm=fld('input','Nama acara',{maxLength:100,value:ev?ev.name:''}),ds=fld('textarea','Deskripsi (opsional)',{rows:2,maxLength:300,value:ev?ev.description:''}),lc=fld('input','Lokasi (opsional)',{maxLength:100,value:ev?ev.location:''}),
@@ -289,7 +327,7 @@ VIEWS.recap=async my=>{
   const show=async()=>{S.rg=gs.value;S.rm=mo.value;out.replaceChildren(h('div','sk'));try{const d=await api('recap',{groupId:gs.value,month:mo.value});out.replaceChildren(h('p','muted',d.groupName+' · '+d.total+' acara selesai'));
     if(!d.total)return out.append(h('div','empty','Belum ada acara selesai pada bulan ini.'));if(!d.rows.length)return out.append(h('div','empty','Belum ada peserta.'));
     const gr=h('div','grid3');d.rows.forEach(p=>{const b=h('div','bar',[h('i')]);b.firstChild.style.width=p.pct+'%';gr.append(h('div','card',[h('div','row',[h('b','',p.name),h('b',p.pct>=75?'ok':p.pct>=CFGR?'warn':'err',p.pct+'%')]),b,h('div','muted','✅ '+p.hadir+'  ⏰ '+p.terlambat+'  📝 '+p.izin+'  🤒 '+p.sakit+'  ❌ '+p.alpa)]))});out.append(gr)}catch(e){out.replaceChildren(h('p','err',e.message))}};
-  v.append(h('div','card grid3',[lab('Grup',gs),lab('Bulan',mo),h('div','btns',[B('Tampilkan','pri',show),B('⬇ CSV','',async()=>{try{await api('recap_export',{groupId:gs.value,month:mo.value});info('CSV dikirim ke chat bot.')}catch(e){toast(e.message,'err')}})])]),out);show()};
+  v.append(h('div','card grid3',[lab('Grup',gs),lab('Bulan',mo),h('div','btns',[B('Tampilkan','pri',show),B('⬇ CSV','',async()=>{try{await api('recap_export',{groupId:gs.value,month:mo.value});info('CSV dikirim ke chat bot.')}catch(e){toast(e.message,'err')}}),B('📑 PDF','',()=>sendPdf('recap_pdf',{groupId:gs.value,month:mo.value}))])]),out);show()};
 const CFGR=60;
 
 /* ---------- Riwayat ---------- */
@@ -297,7 +335,7 @@ VIEWS.history=async my=>{
   title('Riwayat kehadiranku');const d=await api('history');if(my!==S.seq)return;const v=V(),c=d.counts,ring=h('div','ring',[h('b','',c.total?c.pct+'%':'–')]);ring.style.setProperty('--p',c.pct||0);
   v.append(h('div','card row',[ring,h('div','',[h('div','muted',c.total?cnt(c):'Belum ada riwayat'),c.streak>1&&h('div','ok','🔥 '+c.streak+' kehadiran beruntun'),c.total>=3&&c.pct<CFGR&&h('div','warn','Kehadiranmu masih di bawah '+CFGR+'%. Semangat!')])]));
   if(!d.items.length)v.append(h('div','empty','Riwayat akan muncul setelah kamu check-in di acara pertama.'));
-  const g=h('div','grid3');d.items.forEach(i=>g.append(h('div','card click',[h('div','row',[h('b','',i.event),bd(i.status)]),h('div','muted',dt(i.time)+(i.note?' · '+i.note:''))],{onclick:()=>i.startAt&&open(i.eventId)})));v.append(g)};
+  const g=h('div','grid3');d.items.forEach(i=>g.append(h('div','card click',[h('div','row',[h('b','',i.event),bd(i.status)]),h('div','muted',dt(i.time)+(i.note?' · '+i.note:''))],{onclick:()=>i.startAt&&open(i.eventId)})));v.append(g);if(d.items.length)v.append(h('div','btns',[B('📑 Unduh PDF riwayatku','',()=>sendPdf('history_pdf'))]))};
 
 /* ---------- Tema & tampilan ---------- */
 VIEWS.settings=async my=>{
@@ -309,10 +347,11 @@ VIEWS.settings=async my=>{
     h('div','card',[h('b','','Mode'),h('p','muted','“Otomatis” mengikuti tema Telegram atau perangkatmu.'),seg([['auto','Otomatis'],['light','Terang'],['dark','Gelap']],TH.mode,k=>TH.mode=k)]),
     h('div','card',[h('b','','Warna aksen'),h('p','muted','Dipakai untuk tombol, menu aktif, dan penanda.'),sw]),
     h('div','card',[h('b','','Ukuran teks'),seg([[14,'Kecil'],[15,'Normal'],[17,'Besar']],TH.fs,k=>TH.fs=+k)]),
+    h('div','card',[h('b','','Gaya'),h('p','muted','Profesional: rapi dan tegas. Ramah: lebih bulat dan hangat.'),seg([['pro','Profesional'],['ramah','Ramah']],TH.style,k=>TH.style=k)]),
     h('div','card',[h('b','','Kerapatan kartu'),h('p','muted','Ringkas cocok untuk daftar panjang di layar kecil.'),seg([[0,'Nyaman'],[1,'Ringkas']],TH.dense,k=>TH.dense=+k)]),
     h('div','card hero',[h('div','muted','Pratinjau'),h('h3','','Rapat Mingguan'),h('div','muted','🕒 Sen, 09.00–10.30 · 📍 Ruang 2'),h('div','',[bd('hadir'),ph('open')]),h('div','btns',[B('Check-in sekarang','pri',()=>{})])]),
     h('div','muted','Di layar lebar menu tampil di samping, di HP menu ada di bawah. Pilihanmu tersimpan di perangkat ini.'),
-    h('div','btns',[B('Kembalikan bawaan','',()=>{Object.assign(TH,{mode:'auto',acc:'',fs:15,dense:0});applyTh();toast('Tampilan dikembalikan','ok');run(VIEWS.settings)})]))};
+    h('div','btns',[B('Kembalikan bawaan','',()=>{Object.assign(TH,{mode:'auto',acc:'',fs:15,dense:0,style:'pro'});applyTh();toast('Tampilan dikembalikan','ok');run(VIEWS.settings)})]))};
 
 /* ---------- Log audit ---------- */
 let lp=1;
@@ -346,6 +385,8 @@ async function mock(a,p){await sleep(180);const ev=ME.find(x=>x.id===(p.id||p.ev
   case'group_invite':return{code:'a1b2c3d4e5',link:'https://t.me/contoh_bot?start=join_a1b2c3d4e5'};
   case'recap':return{groupName:'Kelas A',total:4,rows:[{name:'Budi Santoso',hadir:4,terlambat:0,izin:0,sakit:0,alpa:0,pct:100},{name:'Siti Aminah',hadir:2,terlambat:1,izin:1,sakit:0,alpa:0,pct:75},{name:'Dimas Prakoso',hadir:1,terlambat:0,izin:0,sakit:0,alpa:3,pct:25}]};
   case'log':return{entries:[{time:'2025-01-10 09:12:03',user:'Admin Demo',action:'acara.buat',detail:'Rapat Mingguan'},{time:'2025-01-10 09:20:41',user:'Admin Demo',action:'hadir.ubah',detail:'12 → izin'}],total:2,page:1,totalPages:1};
+  case'event_report':return{event:ev,counts:ev.counts,rate:67,expected:3,attended:2,median:6,prev:60,attendees:MA.map(a=>Object.assign({delay:a.status==='hadir'?-2:null},a)),missing:[{userId:'13',name:'Dimas Prakoso',username:'',label:'belum'}],insights:[{tone:'ok',text:'Naik 7 poin dibanding rata-rata acara sebelumnya (60%).'},{tone:'info',text:'Sebagian besar peserta tiba sebelum acara dimulai. Disiplin yang bagus!'}]};
+  case'event_pdf':case'recap_pdf':case'history_pdf':return{};
   default:throw new Error('Fitur ini hanya berjalan di aplikasi sungguhan (di pratinjau hanya tampilan).')}}
 
 /* ---------- Mulai ---------- */
@@ -354,7 +395,9 @@ loadTh();applyTh();
 const off=()=>{$('off').hidden=navigator.onLine};addEventListener('online',off);addEventListener('offline',off);off();
 $('thm').onclick=()=>{S.view='settings';nav();run(VIEWS.settings)};
 $('rf').onclick=()=>{const c=S.cur;if(c)run(c[0],...c[1])};
-S.admin=DEMO?DA:false;nav();go('home');
+if(OUTSIDE){$('nav').style.display='none';$('rf').hidden=true;$('thm').hidden=true;title('Absensi Pro');
+  V().append(h('div','card hero',[h('h2','','Buka lewat Telegram ya 👋'),h('p','','Aplikasi ini berjalan di dalam Telegram supaya akunmu terverifikasi otomatis. Buka bot absensi, lalu tekan tombol “Buka Absensi”.')]))}
+else{S.admin=DEMO?DA:false;nav();go('home')}
 </script>
 </body>
 </html>
