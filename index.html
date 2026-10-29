@@ -1,499 +1,360 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Absensi</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-  <style>
-    :root {
-      --bg: var(--tg-theme-bg-color, #ffffff);
-      --text: var(--tg-theme-text-color, #000000);
-      --hint: var(--tg-theme-hint-color, #888888);
-      --card: var(--tg-theme-secondary-bg-color, #f2f2f7);
-      --accent: var(--tg-theme-button-color, #2481cc);
-      --accent-text: var(--tg-theme-button-text-color, #ffffff);
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 16px 16px 76px; font-family: -apple-system, system-ui, sans-serif;
-           background: var(--bg); color: var(--text); }
-    h3 { margin: 0 0 10px; overflow-wrap: anywhere; }
-    input, textarea, select { width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 8px;
-      border: 1px solid var(--hint); background: var(--bg); color: var(--text); font: inherit; }
-    label { display: block; font-size: 13px; color: var(--hint); margin-bottom: 2px; }
-    button { font: inherit; cursor: pointer; }
-    .btn { background: var(--accent); color: var(--accent-text); border: none; border-radius: 8px; padding: 9px 14px; }
-    .btn.sec { background: var(--card); color: var(--text); }
-    .btn.danger { background: #e53935; color: #fff; }
-    .btn:disabled { opacity: .4; }
-    .btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
-    .link-btn { background: none; border: none; color: var(--accent); padding: 0; }
-    .card { background: var(--card); border-radius: 12px; padding: 12px; margin-top: 10px; }
-    .card.click { cursor: pointer; }
-    .hint { color: var(--hint); font-size: 13px; margin-top: 4px; }
-    .ok { color: #2e7d32; font-weight: 600; }
-    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .tabs { display: flex; gap: 8px; margin: 8px 0; }
-    .tab { flex: 1; padding: 8px; border-radius: 8px; border: none; background: var(--card); color: var(--text); }
-    .tab.on { background: var(--accent); color: var(--accent-text); }
-    .badge { display: inline-block; padding: 1px 9px; border-radius: 10px; font-size: 12px; color: #fff; margin: 2px 4px 2px 0; }
-    .b-hadir { background: #2e7d32; } .b-terlambat { background: #ef6c00; }
-    .b-izin { background: #1565c0; } .b-sakit { background: #6a1b9a; }
-    .p-open { background: #2e7d32; } .p-upcoming { background: #757575; }
-    .p-ended { background: #8d6e63; } .p-closed { background: #c62828; }
-    .qr { display: block; width: 100%; max-width: 320px; margin: 12px auto; background: #fff; padding: 8px;
-          border-radius: 12px; image-rendering: pixelated; }
-    .bigcode { font-size: 44px; font-weight: 700; text-align: center; letter-spacing: 4px; }
-    .center { text-align: center; }
-    #status { color: var(--hint); font-size: 14px; min-height: 20px; margin-bottom: 4px; }
-    .empty { text-align: center; color: var(--hint); margin-top: 24px; }
-    .att { border-top: 1px solid var(--bg); padding: 8px 0; }
-    .att select { width: auto; margin: 4px 0 0; padding: 4px; }
-    .pager { display: flex; justify-content: space-between; margin-top: 12px; }
-    #nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; padding: 8px 16px;
-           padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); background: var(--bg);
-           border-top: 1px solid var(--card); }
-    #nav button { flex: 1; padding: 10px; border: none; border-radius: 8px; background: var(--card); color: var(--text); }
-    #nav button.on { background: var(--accent); color: var(--accent-text); }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Absensi Pro</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+:root{color-scheme:light dark;--bg:var(--tg-theme-bg-color,#f2f6f7);--card:var(--tg-theme-secondary-bg-color,#fff);--tx:var(--tg-theme-text-color,#13222b);--mut:var(--tg-theme-hint-color,#6b7a85);
+--pri:#0b7a75;--pt:#fff;--ok:#1e9e5a;--warn:#d9820b;--err:#d63c3c;--info:#2b6fd1;--bd:rgba(110,125,135,.22);--r:14px;
+--font:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",sans-serif}
+@media(prefers-color-scheme:dark){:root:not(.tg){--bg:#0e1519;--card:#16222a;--tx:#e8eef1;--mut:#8b9ba6;--pri:#2bb3ab;--pt:#06201f}}
+:root[data-mode=light]{color-scheme:light;--bg:#f2f6f7;--card:#fff;--tx:#13222b;--mut:#6b7a85}
+:root[data-mode=dark]{color-scheme:dark;--bg:#0e1519;--card:#16222a;--tx:#e8eef1;--mut:#8b9ba6}
+:root[data-dense="1"] .card{padding:10px;margin-bottom:8px}
+.sw{width:36px;height:36px;border-radius:50%;border:3px solid transparent;cursor:pointer;padding:0}.sw.on{border-color:var(--tx)}
+#off{background:var(--err);color:#fff;text-align:center;padding:5px;font-size:13px}
+*{box-sizing:border-box}html,body{margin:0}body{font:var(--fs,15px)/1.5 var(--font);background:var(--bg);color:var(--tx);-webkit-tap-highlight-color:transparent}
+h1,h2,h3{margin:0;line-height:1.25}h1{font-size:22px}h2{font-size:19px}h3{font-size:16px}p{margin:6px 0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+.shell{display:grid;grid-template-columns:1fr;min-height:100vh}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--card);border-top:1px solid var(--bd);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;border:0;background:none;padding:6px 2px;border-radius:10px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+nav button i{font-style:normal;font-size:19px}nav button.on{color:var(--pri);font-weight:600;background:color-mix(in srgb,var(--pri) 12%,transparent)}
+nav .brand{display:none}
+main{padding:16px 14px 92px;max-width:1000px;width:100%;margin:0 auto}
+header{display:flex;align-items:center;gap:10px;margin-bottom:14px;min-height:36px}
+.bk{border:0;background:var(--card);border-radius:10px;width:36px;height:36px;cursor:pointer;font-size:18px}
+@media(min-width:900px){.shell{grid-template-columns:230px 1fr}
+nav{position:sticky;top:0;height:100vh;flex-direction:column;border-top:0;border-right:1px solid var(--bd);padding:18px 12px;gap:4px}
+nav .brand{display:block;font-weight:700;font-size:18px;color:var(--pri);padding:4px 10px 16px}
+nav button{flex:none;flex-direction:row;font-size:14px;gap:10px;padding:10px 12px;justify-content:flex-start}
+main{padding:28px 32px 40px}}
+.card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:12px;border:1px solid var(--bd)}
+.card.click{cursor:pointer;transition:border-color .15s}.card.click:hover{border-color:var(--pri)}
+.hero{border-left:4px solid var(--pri)}
+.grid2{display:grid;gap:12px}.grid3{display:grid;gap:12px}
+@media(min-width:760px){.grid2{grid-template-columns:1.4fr 1fr}.grid3{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.gap{justify-content:flex-start}
+.muted{color:var(--mut);font-size:13px}.ok{color:var(--ok)}.warn{color:var(--warn)}.err{color:var(--err)}
+.btn{border:0;border-radius:10px;padding:9px 14px;background:var(--card);border:1px solid var(--bd);cursor:pointer;font-weight:500}
+.btn.pri{background:var(--pri);color:var(--pt);border-color:var(--pri)}.btn.dng{background:var(--err);color:#fff;border-color:var(--err)}.btn:disabled{opacity:.5;cursor:default}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+input,select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);margin:4px 0 10px}
+label{font-size:13px;color:var(--mut)}
+.bd{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;color:#fff;margin:2px 4px 2px 0}
+.hadir{background:var(--ok)}.terlambat{background:var(--warn)}.izin{background:var(--info)}.sakit{background:#7b4cc4}.alpa{background:var(--err)}.belum{background:#78858f}
+.open{background:var(--ok)}.upcoming{background:#78858f}.ended{background:#8a766b}.closed{background:var(--err)}.grp{background:var(--pri)}
+.tabs{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}.tab{border:1px solid var(--bd);background:var(--card);border-radius:999px;padding:6px 14px;cursor:pointer}
+.tab.on{background:var(--pri);color:var(--pt);border-color:var(--pri)}
+.ring{--p:0;width:92px;height:92px;border-radius:50%;background:conic-gradient(var(--ok) calc(var(--p)*1%),var(--bd) 0);display:grid;place-items:center;flex:none}
+.ring b{width:70px;height:70px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:20px}
+.bar{height:6px;border-radius:3px;background:var(--bd);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--ok)}
+.stat{text-align:center}.stat b{display:block;font-size:24px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}@media(min-width:760px){.stats{grid-template-columns:repeat(4,1fr)}}
+.tip{border-radius:10px;padding:9px 12px;margin-top:8px;background:color-mix(in srgb,var(--info) 12%,transparent)}
+.tip.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:inherit}.tip.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:inherit}
+.att{border-top:1px solid var(--bd);padding:8px 0}.att select{width:auto;margin:4px 0 0;padding:4px 8px}
+.qr{display:block;width:100%;max-width:340px;margin:10px auto;background:#fff;padding:8px;border-radius:12px;image-rendering:pixelated}
+.code{font-size:clamp(40px,9vw,64px);font-weight:700;text-align:center;letter-spacing:.12em;font-variant-numeric:tabular-nums}
+.sk{height:76px;border-radius:var(--r);background:linear-gradient(90deg,var(--card),var(--bd),var(--card));background-size:200% 100%;animation:sk 1.2s infinite;margin-bottom:12px}
+@keyframes sk{to{background-position:-200% 0}}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.t{background:#1b2a33;color:#fff;padding:10px 16px;border-radius:12px;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.25)}.t.err{background:var(--err)}.t.ok{background:var(--ok)}
+.demo{background:var(--warn);color:#fff;padding:6px 12px;font-size:13px;display:flex;justify-content:center;gap:10px;align-items:center}.demo button{border:1px solid #fff;background:none;color:#fff;border-radius:8px;padding:2px 10px;cursor:pointer}
+details summary{cursor:pointer;color:var(--pri);margin:6px 0}
+.empty{text-align:center;color:var(--mut);padding:28px 8px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
 </head>
 <body>
-  <h3 id="hello">Memuat…</h3>
-  <div id="status"></div>
-  <div id="app"></div>
-  <div id="nav">
-    <button id="navEvents" class="on">📅 Acara</button>
-    <button id="navHistory">🕘 Riwayat saya</button>
-  </div>
+<div id="demo" class="demo" hidden><span>🧪 Mode pratinjau: data contoh, kode check-in <b>482913</b></span><button id="role"></button></div>
+<div id="off" hidden>📡 Kamu sedang offline. Perubahan baru tersimpan setelah internet tersambung.</div>
+<div class="shell">
+  <nav id="nav"></nav>
+  <main><header><button class="bk" id="bk" hidden aria-label="Kembali">‹</button><h1 id="ttl" style="flex:1">Memuat…</h1><button class="bk" id="rf" title="Muat ulang" aria-label="Muat ulang">↻</button><button class="bk" id="thm" title="Tema & tampilan" aria-label="Tema">🎨</button></header><div id="view"></div></main>
+</div>
+<div id="toast" aria-live="polite"></div>
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbzkfOBvgwJFMP-ReYjvXuVZ6VjFQrSxVIEalZar6u5GklPLRzPYKnQjMk13vixR4xcA/exec';
+const tg=(window.Telegram&&Telegram.WebApp)||{};
+const DEMO=!tg.initData;
+if(!DEMO){document.documentElement.classList.add('tg');try{tg.ready();tg.expand()}catch(e){}}
+const $=id=>document.getElementById(id);
+const L={hadir:'Hadir',terlambat:'Terlambat',izin:'Izin',sakit:'Sakit',alpa:'Alpa',belum:'Belum'};
+const PH={upcoming:'Belum dibuka',open:'Check-in dibuka',ended:'Waktu habis',closed:'Ditutup'};
+const SET=['hadir','terlambat','izin','sakit'];
+const ACT={'acara.buat':'Acara dibuat','acara.ubah':'Acara diubah','acara.hapus':'Acara dihapus','acara.tutup':'Acara ditutup','acara.buka':'Acara dibuka','hadir.ubah':'Status diubah','hadir.hapus':'Catatan dihapus','grup.simpan':'Grup disimpan','grup.hapus':'Grup dihapus','anggota.tambah':'Anggota ditambah','anggota.hapus':'Anggota dihapus','ekspor.acara':'Ekspor acara','ekspor.rekap':'Ekspor rekap'};
+const S={view:'home',admin:false,back:null,timer:null,seq:0,busy:false,filter:'active',page:1,q:'',rg:'',rm:''};
 
-  <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzkfOBvgwJFMP-ReYjvXuVZ6VjFQrSxVIEalZar6u5GklPLRzPYKnQjMk13vixR4xcA/exec';
+/* ---------- tema ---------- */
+const TH={mode:'auto',acc:'',fs:15,dense:0};
+const ACC=[['','Teal'],['#2b6fd1','Biru'],['#7b4cc4','Ungu'],['#c8620a','Oranye'],['#c2386b','Mawar'],['#2f8f3e','Hijau']];
+function loadTh(){try{Object.assign(TH,JSON.parse(localStorage.getItem('abs_th')||'{}'))}catch(e){}}
+function applyTh(){const r=document.documentElement;
+  if(TH.mode==='auto')r.removeAttribute('data-mode');else r.dataset.mode=TH.mode;
+  TH.acc?r.style.setProperty('--pri',TH.acc):r.style.removeProperty('--pri');
+  r.style.setProperty('--fs',TH.fs+'px');r.dataset.dense=TH.dense;
+  try{localStorage.setItem('abs_th',JSON.stringify(TH))}catch(e){}
+  try{const c=getComputedStyle(document.body).backgroundColor.match(/\d+/g).slice(0,3).map(n=>(+n).toString(16).padStart(2,'0')).join('');tg.setHeaderColor('#'+c);tg.setBackgroundColor('#'+c)}catch(e){}}
 
-    const LABEL = { hadir: 'Hadir', terlambat: 'Terlambat', izin: 'Izin', sakit: 'Sakit' };
-    const PHASE = { upcoming: 'Belum dibuka', open: 'Check-in dibuka', ended: 'Waktu habis', closed: 'Ditutup' };
+/* ---------- util ---------- */
+const h=(t,c,k,p)=>{const e=document.createElement(t);if(c)e.className=c;[].concat(k==null?[]:k).forEach(x=>x!=null&&x!==false&&e.append(x));if(p)Object.assign(e,p);return e};
+const B=(t,c,f)=>h('button','btn '+(c||''),t,{onclick:f});
+const bd=s=>h('span','bd '+s,L[s]||s);
+const ph=p=>h('span','bd '+p,PH[p]||p);
+const fld=(t,pl,p)=>h(t,'',null,Object.assign({placeholder:pl||''},p));
+const lab=(t,i)=>h('div','',[h('label','',t),i]);
+const sel=(o,v)=>{const s=h('select');o.forEach(([a,b])=>s.append(h('option','',b,{value:a})));s.value=v;return s};
+const V=()=>{const v=$('view');v.replaceChildren();return v};
+const hap=t=>{try{tg.HapticFeedback.notificationOccurred(t)}catch(e){}};
+const dt=x=>new Date(x).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
+const tm=x=>new Date(x).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+const rng=(a,b)=>{const s=new Date(a),e=new Date(b);return s.toDateString()===e.toDateString()?s.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'})+', '+tm(s)+'–'+tm(e):dt(s)+' – '+dt(e)};
+const loc=d=>{d=new Date(d);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())};
+const cnt=c=>'✅ '+c.hadir+'  ⏰ '+c.terlambat+'  📝 '+c.izin+'  🤒 '+c.sakit+(c.alpa?'  ❌ '+c.alpa:'')+(c.belum?'  ⏳ '+c.belum:'');
+function toast(m,t){const e=h('div','t '+(t||''),m);$('toast').append(e);setTimeout(()=>e.remove(),3400)}
+function ask(m,cb){if(!DEMO&&tg.showConfirm)tg.showConfirm(m,cb);else cb(confirm(m))}
+function info(m,cb){if(!DEMO&&tg.showAlert)tg.showAlert(m,cb);else{toast(m,'ok');cb&&cb()}}
+function clr(){if(S.timer){clearInterval(S.timer);S.timer=null}}
+function title(t){$('ttl').textContent=t;$('bk').hidden=!S.back;try{S.back?tg.BackButton.show():tg.BackButton.hide()}catch(e){}}
+$('bk').onclick=()=>S.back&&S.back();
+try{tg.BackButton.onClick(()=>S.back&&S.back())}catch(e){}
+const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('Tersalin','ok')}catch(e){prompt('Salin manual:',t)}};
+function pos(){return new Promise((ok,no)=>{if(!navigator.geolocation)return no(new Error('Perangkat tidak mendukung lokasi'));navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude}),e=>no(new Error(e.code===1?'Izin lokasi ditolak. Aktifkan lokasi lalu coba lagi.':'Lokasi belum bisa diambil')),{enableHighAccuracy:true,timeout:12000,maximumAge:0})})}
 
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
-    const $ = id => document.getElementById(id);
+async function api(a,p={}){
+  if(DEMO)return mock(a,p);
+  if(!navigator.onLine)throw new Error('Kamu sedang offline. Sambungkan internet lalu coba lagi.');
+  let r;try{r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:a,initData:tg.initData,...p})})}catch(e){throw new Error('Tidak bisa menjangkau server. Periksa koneksi dan API_URL.')}
+  let d;try{d=JSON.parse(await r.text())}catch(e){throw new Error('Server tidak membalas dengan benar (HTTP '+r.status+').')}
+  if(!d.ok){const e=new Error(d.error||'Permintaan gagal');e.data=d;throw e}return d}
 
-    if (!tg.initData) {
-      document.body.innerHTML = '<p style="padding:16px">Buka aplikasi ini lewat Telegram.</p>';
-      throw new Error('Tidak ada initData');
-    }
+/* ---------- navigasi ---------- */
+const NAV=[['home','🏠','Beranda'],['events','📅','Acara'],['history','🕘','Riwayat'],['groups','👥','Grup',1],['recap','📊','Rekap',1],['log','🛡️','Log',1]];
+function nav(){const n=$('nav');n.replaceChildren(h('div','brand','Absensi Pro'));NAV.filter(x=>!x[3]||S.admin).forEach(([k,i,t])=>n.append(h('button',S.view===k?'on':'',[h('i','',i),t],{onclick:()=>go(k)})))}
+const VIEWS={};
+function go(v){S.view=v;S.back=null;nav();run(VIEWS[v])}
+function open(id){run(detail,id)}
+async function run(fn,...a){clr();S.back=null;S.cur=[fn,a];const my=++S.seq;const v=V();for(let i=0;i<3;i++)v.append(h('div','sk'));try{await fn(my,...a)}catch(e){if(my!==S.seq)return;V().append(h('div','card',[h('b','err','Ups, ada kendala'),h('p','muted',e.message),B('Coba lagi','pri',()=>run(fn,...a))]));title('Terjadi kendala')}}
 
-    const state = { filter: 'active', page: 1, isAdmin: false, back: null, timer: null, seq: 0, busy: false };
+/* ---------- Beranda ---------- */
+VIEWS.home=async my=>{
+  const d=await api('dashboard');if(my!==S.seq)return;S.admin=d.isAdmin;nav();
+  const u=(tg.initDataUnsafe&&tg.initDataUnsafe.user)||{first_name:'Admin Demo'},hr=new Date().getHours();
+  title((hr<11?'Selamat pagi':hr<15?'Selamat siang':hr<18?'Selamat sore':'Selamat malam')+', '+u.first_name);
+  const v=V(),c=d.me.counts,n=d.me.next,g=h('div','grid2');
+  const nx=h('div','card hero');
+  if(n)nx.append(h('div','muted','Acara berikutnya'),h('h2','',n.name),h('div','muted','🕒 '+rng(n.startAt,n.endAt)+(n.location?'  📍 '+n.location:'')),h('div','',[ph(n.phase),n.myStatus&&bd(n.myStatus)]),
+    h('div','btns',[B(n.phase==='open'&&!n.myStatus?'Check-in sekarang':'Lihat detail','pri',()=>open(n.id))]));
+  else nx.append(h('h2','','Belum ada acara terdekat'),h('p','muted','Jadwal kosong dulu. Nikmati waktu luangmu ☕'),S.admin&&h('div','btns',[B('Buat acara','pri',()=>form())]));
+  const me=h('div','card row');const ring=h('div','ring',[h('b','',c.total?c.pct+'%':'–')]);ring.style.setProperty('--p',c.pct||0);
+  me.append(ring,h('div','',[h('b','','Kehadiranmu'),h('div','muted',c.total?cnt(c):'Belum ada riwayat'),c.streak>1&&h('div','ok','🔥 '+c.streak+' kehadiran beruntun')]));
+  g.append(nx,me);v.append(g);
+  d.insights.forEach(i=>v.append(h('div','tip '+i.tone,i.text)));
+  if(d.admin){const a=d.admin;
+    v.append(h('h3','','Ringkasan admin'),h('div','stats',[['Berlangsung',a.openNow],['Akan datang',a.upcoming],['Grup',a.groups],['Rata-rata bulan ini',a.avg==null?'–':a.avg+'%']].map(([t,x])=>h('div','card stat',[h('b','',x),h('span','muted',t)]))));
+    const rk=h('div','card',[h('b','','Perlu perhatian bulan ini')]);
+    if(!a.risk.length)rk.append(h('p','muted','Tidak ada anggota dengan kehadiran rendah. 👍'));
+    a.risk.forEach(p=>rk.append(h('div','att row',[h('span','',p.name+' · '+p.group),h('b','err',p.pct+'% ('+p.alpa+'× alpa)')])));
+    v.append(rk,h('div','btns',[B('＋ Acara baru','pri',()=>form()),B('Kelola grup','',()=>go('groups'))]))}
+};
 
-    /* ---------- Util ---------- */
-async function api(action, payload = {}) {
-  let res;
-  try {
-    res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, initData: tg.initData, ...payload })
-    });
-  } catch (err) {
-    throw new Error('Tidak bisa menjangkau server. Periksa API_URL (harus berakhiran /exec).');
-  }
-  const text = await res.text();
-  let data;
-  try { data = JSON.parse(text); }
-  catch (err) { throw new Error('Server tidak membalas JSON (HTTP ' + res.status + ').'); }
-  if (!data.ok) { const e = new Error(data.error || 'Request gagal'); e.data = data; throw e; }
-  return data;
+/* ---------- Acara ---------- */
+function evCard(ev){
+  const c=h('div','card click',[h('div','row',[h('b','',ev.name),ph(ev.phase)]),
+    ev.groupName&&h('span','bd grp','👥 '+ev.groupName),ev.inSeries&&h('span','bd upcoming','🔁 berulang'),
+    h('div','muted','🕒 '+rng(ev.startAt,ev.endAt)),ev.location&&h('div','muted','📍 '+ev.location),ev.myStatus&&bd(ev.myStatus),ev.counts&&h('div','muted',cnt(ev.counts))],{onclick:()=>open(ev.id)});return c}
+let st;
+VIEWS.events=async my=>{
+  title('Acara');const d=await api('events',{filter:S.filter,page:S.page,q:S.q});if(my!==S.seq)return;S.admin=d.isAdmin;nav();
+  const v=V(),q=fld('input','Cari nama acara atau lokasi…',{type:'search',value:S.q});
+  q.oninput=()=>{clearTimeout(st);st=setTimeout(()=>{S.q=q.value.trim();S.page=1;run(VIEWS.events)},450)};
+  v.append(h('div','row',[h('div','btns',[B('📷 Scan QR','pri',scan),S.admin&&B('＋ Acara baru','',()=>form())]),]),q);
+  const t=h('div','tabs');[['active','Akan datang'],['past','Selesai']].forEach(([k,x])=>t.append(h('button','tab'+(S.filter===k?' on':''),x,{onclick:()=>{S.filter=k;S.page=1;run(VIEWS.events)}})));v.append(t);
+  if(!d.items.length)v.append(h('div','empty',S.q?'Tidak ada acara yang cocok dengan pencarianmu.':S.filter==='past'?'Belum ada acara yang selesai.':'Belum ada acara. '+(S.admin?'Tekan “Acara baru” untuk memulai.':'Tunggu info dari panitia ya.')));
+  const g=h('div','grid3');d.items.forEach(e=>g.append(evCard(e)));v.append(g);
+  if(d.totalPages>1)v.append(h('div','row',[B('‹ Sebelumnya','',()=>{S.page--;run(VIEWS.events)},),h('span','muted',d.page+'/'+d.totalPages),B('Berikutnya ›','',()=>{S.page++;run(VIEWS.events)})]));
+  v.querySelectorAll('.row .btn').forEach(b=>{if(b.textContent.startsWith('‹'))b.disabled=d.page<=1;if(b.textContent.startsWith('Berikut'))b.disabled=d.page>=d.totalPages});
+};
+
+/* ---------- Check-in ---------- */
+function scan(){
+  if(DEMO||!tg.showScanQrPopup)return info('Pemindai QR belum tersedia di sini. Buka acara lalu ketik kodenya.');
+  tg.showScanQrPopup({text:'Arahkan kamera ke QR acara'},t=>{const m=/^ABS\|([0-9a-f-]{36})\|(\d{6})$/.exec(String(t).trim());if(!m){toast('QR itu bukan QR absensi','err');return false}setTimeout(()=>checkin(m[1],m[2]),0);return true});
 }
+async function checkin(id,code){
+  if(S.busy)return;S.busy=true;
+  try{let r;try{r=await api('checkin',{eventId:id,code})}catch(e){if(!(e.data&&e.data.needLocation))throw e;toast('Mengambil lokasimu…');const p=await pos();r=await api('checkin',{eventId:id,code,lat:p.lat,lng:p.lng})}
+    hap('success');info((r.status==='terlambat'?'⏰ ':'✅ ')+r.msg+' ('+tm(r.time)+')',()=>open(id))}
+  catch(e){hap('error');toast(e.message,'err')}S.busy=false}
+async function absence(id,status,note){if(S.busy)return;S.busy=true;try{await api('absence',{eventId:id,status,note});hap('success');toast('Tercatat sebagai '+L[status].toLowerCase(),'ok');open(id)}catch(e){hap('error');toast(e.message,'err')}S.busy=false}
 
-    function el(tag, cls, text) {
-      const e = document.createElement(tag);
-      if (cls) e.className = cls;
-      if (text !== undefined) e.textContent = text;   // textContent = aman dari XSS
-      return e;
-    }
-    function btn(text, cls, fn) { const b = el('button', 'btn ' + (cls || ''), text); b.onclick = fn; return b; }
-    function field(tag, ph, attrs = {}) {
-      const f = el(tag); f.placeholder = ph || '';
-      Object.assign(f, attrs);
-      return f;
-    }
-    function labeled(text, input) {
-      const w = el('div'); w.append(el('label', '', text), input); return w;
-    }
-    function badge(status) { return el('span', 'badge b-' + status, LABEL[status] || status); }
-    function phaseBadge(p) { return el('span', 'badge p-' + p, PHASE[p] || p); }
+/* ---------- Detail ---------- */
+async function detail(my,id){
+  const d=await api('event_get',{id});if(my!==S.seq)return;S.admin=d.isAdmin;nav();
+  const ev=d.event,past=ev.phase==='ended'||ev.phase==='closed',v=V();S.back=()=>go('events');title(ev.name);
+  v.append(h('div','card',[ph(ev.phase),ev.groupName&&h('span','bd grp','👥 '+ev.groupName),h('p','','🕒 '+rng(ev.startAt,ev.endAt)),ev.location&&h('p','','📍 '+ev.location),ev.description&&h('p','muted',ev.description),
+    h('p','muted','Terlambat jika check-in setelah '+tm(new Date(ev.startAt).getTime()+ev.lateAfter*60000)+(ev.radius?' · wajib berada dalam radius '+ev.radius+' m':''))]));
+  const bx=h('div','card'),m=d.mine;
+  if(m&&(m.status==='hadir'||m.status==='terlambat'))bx.append(h('b','ok','✅ Kamu tercatat '+L[m.status].toLowerCase()+' pukul '+tm(m.time)));
+  else{
+    if(m&&m.status==='alpa')bx.append(h('b','err','❌ Tidak ada catatan kehadiranmu (alpa). Hubungi panitia bila ini keliru.'));
+    else if(m)bx.append(h('p','muted','Status kamu: '+L[m.status]+(m.note?' — '+m.note:'')));
+    if(ev.phase==='open'){const c=fld('input','000000',{inputMode:'numeric',maxLength:6,autocomplete:'one-time-code'});
+      c.oninput=()=>{c.value=c.value.replace(/\D/g,'');if(c.value.length===6)checkin(ev.id,c.value)};
+      bx.append(lab('Masukkan kode dari panitia (otomatis terkirim setelah 6 digit)',c),h('div','btns',[B('📷 Scan QR','pri',scan)]))}
+    else if(ev.phase==='upcoming')bx.append(h('p','muted','Check-in dibuka 30 menit sebelum acara dimulai.'));
+    else bx.append(h('p','muted',ev.phase==='closed'?'Acara sudah ditutup.':'Waktu acara sudah berakhir.'));
+    if(ev.phase==='open'||ev.phase==='upcoming'){const n=fld('input','Alasan (opsional)',{maxLength:200});bx.append(h('hr'),lab('Tidak bisa hadir? Kabari panitia',n),h('div','btns',[B('📝 Izin','',()=>absence(ev.id,'izin',n.value)),B('🤒 Sakit','',()=>absence(ev.id,'sakit',n.value))]))}}
+  v.append(bx);if(d.isAdmin)v.append(adminBox(ev,d));
+}
+function delAsk(ev){const run1=async s=>{try{await api('event_delete',{id:ev.id,scope:s});toast('Acara dihapus','ok');go('events')}catch(e){toast(e.message,'err')}};
+  if(ev.inSeries&&!DEMO&&tg.showPopup)tg.showPopup({title:'Hapus acara',message:'Acara ini bagian dari seri berulang.',buttons:[{id:'one',type:'destructive',text:'Hanya ini'},{id:'series',type:'destructive',text:'Seri mendatang'},{type:'cancel'}]},i=>{if(i==='one'||i==='series')run1(i)});
+  else ask('Hapus acara beserta seluruh data kehadirannya?',ok=>ok&&run1('one'))}
+function adminBox(ev,d){
+  const bx=h('div','card'),c=d.counts,tot=d.attendees.length+(d.missing?d.missing.length:0),got=c.hadir+c.terlambat;
+  const set=async(uid,nm,s,note)=>{try{await api('att_set',{eventId:ev.id,userId:uid,name:nm,status:s,note:note||''});toast('Status diperbarui','ok');open(ev.id)}catch(e){toast(e.message,'err')}};
+  bx.append(h('div','row',[h('b','','Panel admin'),h('span','muted',tot?Math.round(got/tot*100)+'% hadir':'')]),h('div','bar',[h('i','',null,{})]),h('div','muted',cnt(c)));
+  bx.querySelector('.bar i').style.width=(tot?got/tot*100:0)+'%';
+  bx.append(h('div','btns',[B('📲 Kode / QR','pri',()=>codeView(ev)),B('✎ Edit','',()=>form(ev)),
+    B(ev.phase==='closed'?'🔓 Buka lagi':'🔒 Tutup','',async()=>{try{await api('event_status',{id:ev.id,status:ev.phase==='closed'?'open':'closed'});open(ev.id)}catch(e){toast(e.message,'err')}}),
+    B('⬇ CSV','',async()=>{try{await api('export',{id:ev.id});info('CSV dikirim ke chat bot.')}catch(e){toast(e.message,'err')}}),B('🗑 Hapus','dng',()=>delAsk(ev))]));
+  bx.append(h('h3','','Tercatat ('+d.attendees.length+')'));if(!d.attendees.length)bx.append(h('p','muted','Belum ada yang check-in.'));
+  d.attendees.forEach(a=>{const s=sel(SET.map(k=>[k,L[k]]),a.status);s.onchange=()=>set(a.userId,a.name,s.value,a.note);
+    const x=h('button','btn','✕ hapus',{onclick:()=>ask('Hapus '+a.name+' dari daftar?',async ok=>{if(!ok)return;try{await api('att_delete',{id:a.id});open(ev.id)}catch(e){toast(e.message,'err')}})});
+    bx.append(h('div','att',[h('div','row',[h('span','',a.name+(a.username?' @'+a.username:'')),bd(a.status)]),h('div','muted',tm(a.time)+' · '+a.method+(a.distance!=null?' · '+a.distance+' m':'')+(a.note?' · '+a.note:'')),h('div','row gap',[s,x])]))});
+  if(d.missing&&d.missing.length){bx.append(h('h3','','Belum tercatat ('+d.missing.length+')'));
+    d.missing.forEach(m=>{const s=sel([['','Ubah status…']].concat(SET.map(k=>[k,L[k]])),'');s.onchange=()=>s.value&&set(m.userId,m.name,s.value,'diubah admin');bx.append(h('div','att',[h('div','row',[h('span','',m.name),bd(m.label)]),s]))})}
+  const u=fld('input','ID Telegram (angka)',{inputMode:'numeric'}),n=fld('input','Nama',{maxLength:100}),s=sel(SET.map(k=>[k,L[k]]),'hadir'),t=fld('input','Catatan (opsional)',{maxLength:200});
+  bx.append(h('details','',[h('summary','','Tambah atau ubah manual'),u,n,s,t,B('Simpan','pri',()=>set(u.value.trim(),n.value,s.value,t.value))]));return bx}
 
-    const setStatus = m => { $('status').textContent = m || ''; };
-    const hapt = t => { try { tg.HapticFeedback.notificationOccurred(t); } catch (e) {} };
+/* ---------- Kode / QR ---------- */
+function codeView(ev){
+  clr();S.back=()=>open(ev.id);title(ev.name);const v=V(),img=h('img','qr',null,{alt:'QR absensi'}),ce=h('div','code','······'),cd=h('p','muted',''),w=h('div','card',[img,ce,cd,h('p','muted','Tampilkan layar ini ke peserta. Kode berganti otomatis tiap menit agar tidak bisa dibagikan.'),
+    h('div','btns',[B('⛶ Layar penuh','',()=>{const e=document.documentElement;(e.requestFullscreen||(()=>0)).call(e)})])]);v.append(w);
+  let exp=0,bz=false;const rf=async()=>{if(bz)return;bz=true;try{const d=await api('code',{id:ev.id});exp=Date.now()+d.expiresIn*1000;ce.textContent=d.code.slice(0,3)+' '+d.code.slice(3);const q=qrcode(0,'M');q.addData('ABS|'+ev.id+'|'+d.code);q.make();img.src=q.createDataURL(8,4)}catch(e){exp=Date.now()+5000;toast(e.message,'err')}bz=false};
+  S.timer=setInterval(()=>{const l=Math.ceil((exp-Date.now())/1000);if(l<=0)rf();else cd.textContent='Berganti dalam '+l+' detik'},1000);rf()}
 
-    function fmtDT(x) { return new Date(x).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }); }
-    function fmtTime(x) { return new Date(x).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); }
-    function fmtRange(a, b) {
-      const s = new Date(a), e = new Date(b);
-      return s.toDateString() === e.toDateString()
-        ? s.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) +
-          ' · ' + fmtTime(s) + '–' + fmtTime(e)
-        : fmtDT(s) + ' – ' + fmtDT(e);
-    }
-    function toLocalInput(d) {
-      d = new Date(d);
-      const p = n => String(n).padStart(2, '0');
-      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
-    }
-    function countsLine(c) {
-      return '✅ ' + c.hadir + ' · ⏰ ' + c.terlambat + ' · 📝 ' + c.izin + ' · 🤒 ' + c.sakit;
-    }
+/* ---------- Form acara ---------- */
+async function form(ev){
+  clr();const my=++S.seq;S.back=ev?()=>open(ev.id):()=>go('events');title(ev?'Edit acara':'Acara baru');
+  let gs;try{gs=(await api('group_list')).items}catch(e){return toast(e.message,'err')}if(my!==S.seq)return;
+  const v=V(),s0=new Date(),tip=h('div','tip');tip.hidden=true;s0.setMinutes(0,0,0);s0.setHours(s0.getHours()+1);
+  const nm=fld('input','Nama acara',{maxLength:100,value:ev?ev.name:''}),ds=fld('textarea','Deskripsi (opsional)',{rows:2,maxLength:300,value:ev?ev.description:''}),lc=fld('input','Lokasi (opsional)',{maxLength:100,value:ev?ev.location:''}),
+    gr=sel([['','Terbuka untuk semua']].concat(gs.map(g=>[g.id,g.name])),ev?ev.groupId:''),s=fld('input','',{type:'datetime-local',value:loc(ev?ev.startAt:s0)}),e=fld('input','',{type:'datetime-local',value:loc(ev?ev.endAt:s0.getTime()+72e5)}),
+    lt=fld('input','',{type:'number',min:0,max:600,value:ev?ev.lateAfter:15}),la=fld('input','Lintang',{inputMode:'decimal',value:ev&&ev.lat!=null?ev.lat:''}),ln=fld('input','Bujur',{inputMode:'decimal',value:ev&&ev.lng!=null?ev.lng:''}),rd=fld('input','',{type:'number',min:0,max:5000,value:ev?ev.radius:0}),
+    rp=sel([['','Tidak berulang'],['weekly','Setiap minggu'],['daily','Setiap hari']],''),rc=fld('input','',{type:'number',min:2,max:52,value:4});
+  const c=h('div','card',[lab('Nama',nm),ds,lc,lab('Grup peserta (hanya anggota yang bisa check-in, alpa dihitung otomatis)',gr),tip,h('div','grid3',[lab('Mulai',s),lab('Selesai',e)]),lab('Dianggap terlambat setelah (menit dari jam mulai)',lt)]);
+  if(!ev)c.append(h('details','',[h('summary','','Pengulangan (rapat rutin)'),lab('Ulangi',rp),lab('Jumlah acara total (maks. 52)',rc)]));
+  c.append(h('details','',[h('summary','','Batasi area check-in (opsional)'),B('📍 Pakai lokasiku sekarang','',async()=>{try{const p=await pos();la.value=p.lat.toFixed(6);ln.value=p.lng.toFixed(6)}catch(x){toast(x.message,'err')}}),la,ln,lab('Radius (meter, 0 = bebas)',rd)]),
+    h('div','btns',[B(ev?'Simpan perubahan':'Buat acara','pri',async()=>{
+      if(!nm.value.trim())return toast('Nama acara wajib diisi','err');if(!s.value||!e.value)return toast('Waktu mulai dan selesai wajib diisi','err');if(S.busy)return;S.busy=true;
+      try{const r=await api('event_save',{id:ev?ev.id:'',name:nm.value,description:ds.value,location:lc.value,groupId:gr.value,startAt:new Date(s.value).toISOString(),endAt:new Date(e.value).toISOString(),lateAfter:lt.value,lat:la.value,lng:ln.value,radius:rd.value,repeat:ev?'':rp.value,repeatCount:rc.value});
+        hap('success');(r.warnings||[]).forEach(w=>toast('⚠️ '+w));toast(r.created>1?r.created+' acara dibuat':'Acara tersimpan','ok');open(r.id)}catch(x){hap('error');toast(x.message,'err')}S.busy=false})]));
+  v.append(c);
+  const sug=async()=>{tip.hidden=true;if(!gr.value)return;try{const r=await api('suggest',{groupId:gr.value});tip.className='tip';
+    if(!r.enough)tip.replaceChildren('💡 Belum cukup riwayat check-in grup ini untuk memberi saran (butuh sekitar 5 check-in).');
+    else tip.replaceChildren(h('div','','💡 Dari '+r.events+' acara terakhir, anggota biasanya check-in ±'+r.median+' menit setelah mulai dan rata-rata hadir '+r.pct+'%. Saran batas terlambat: '+r.late+' menit.'),h('div','btns',[B('Pakai saran','',()=>{lt.value=r.late;toast('Batas terlambat diatur '+r.late+' menit','ok')})]));
+    tip.hidden=false}catch(e){}};
+  gr.onchange=sug;sug()}
 
-    function cleanup() { if (state.timer) { clearInterval(state.timer); state.timer = null; } }
-    function setBack(fn) { state.back = fn; fn ? tg.BackButton.show() : tg.BackButton.hide(); }
-    tg.BackButton.onClick(() => { if (state.back) state.back(); });
+/* ---------- Grup ---------- */
+VIEWS.groups=async my=>{
+  title('Grup & peserta');const d=await api('group_list');if(my!==S.seq)return;const v=V(),n=fld('input','Nama grup baru, mis. Kelas A',{maxLength:60});
+  v.append(h('div','card',[n,B('＋ Buat grup','pri',async()=>{if(!n.value.trim())return toast('Nama grup wajib diisi','err');try{await api('group_save',{name:n.value});toast('Grup dibuat','ok');go('groups')}catch(e){toast(e.message,'err')}})]));
+  if(!d.items.length)v.append(h('div','empty','Belum ada grup. Grup dipakai untuk membatasi acara, menghitung alpa, dan membuat rekap.'));
+  const g=h('div','grid3');d.items.forEach(x=>g.append(h('div','card click',[h('div','row',[h('b','',x.name),h('span','muted',x.members+' anggota')]),h('div','muted',x.events+' acara')],{onclick:()=>members(x.id,x.name)})));v.append(g)};
+function members(gid,gn){run(async my=>{
+  const d=await api('members',{groupId:gid});if(my!==S.seq)return;S.back=()=>go('groups');title(gn);const v=V(),rn=fld('input','Nama grup',{value:gn,maxLength:60});
+  v.append(h('div','card',[rn,h('div','btns',[B('Simpan nama','',async()=>{try{await api('group_save',{id:gid,name:rn.value});members(gid,rn.value.trim())}catch(e){toast(e.message,'err')}}),
+    B('🗑 Hapus grup','dng',()=>ask('Hapus grup beserta daftar anggotanya?',async ok=>{if(!ok)return;try{await api('group_delete',{id:gid});go('groups')}catch(e){toast(e.message,'err')}}))])]));
+  const iv=h('div','card',[h('b','','Tautan undangan'),h('p','muted','Peserta cukup membuka tautan ini lalu otomatis terdaftar, tanpa perlu kamu input satu per satu.')]),ib=h('div','btns');
+  const show=async renew=>{try{const r=await api('group_invite',{groupId:gid,renew});ib.replaceChildren();if(!r.link){ib.append(h('p','warn','Tautan belum tersedia: jalankan setupAll di Apps Script agar username bot terdeteksi.'));return}
+    ib.append(h('code','',r.link),B('Salin','',()=>copy(r.link)),B('Bagikan','',()=>{const u='https://t.me/share/url?url='+encodeURIComponent(r.link);tg.openTelegramLink?tg.openTelegramLink(u):window.open(u)}),B('Buat ulang','',()=>ask('Tautan lama tidak akan berlaku lagi. Lanjutkan?',ok=>ok&&show(true))))}catch(e){toast(e.message,'err')}};
+  iv.append(ib,B('Tampilkan tautan','pri',()=>show(false)));v.append(iv);
+  const ta=fld('textarea','123456789,Budi Santoso\n987654321,Siti Aminah',{rows:4});
+  v.append(h('details','card',[h('summary','','Tambah anggota manual'),h('p','muted','Satu orang per baris: ID Telegram, koma, nama.'),ta,B('Tambahkan','pri',async()=>{try{const r=await api('member_add',{groupId:gid,text:ta.value});info('Ditambahkan: '+r.added+'\nSudah ada: '+r.skipped+'\nBaris tidak valid: '+r.invalid,()=>members(gid,gn))}catch(e){toast(e.message,'err')}})]),h('h3','','Anggota ('+d.items.length+')'));
+  if(!d.items.length)v.append(h('div','empty','Belum ada anggota.'));
+  d.items.forEach(m=>v.append(h('div','card row',[h('div','',[h('div','',m.name+(m.username?' @'+m.username:'')),h('div','muted','ID '+m.userId)]),B('✕','',()=>ask('Hapus '+m.name+' dari grup?',async ok=>{if(!ok)return;try{await api('member_delete',{id:m.id});members(gid,gn)}catch(e){toast(e.message,'err')}}))])))})}
 
-    function markNav(which) {
-      $('navEvents').classList.toggle('on', which === 'events');
-      $('navHistory').classList.toggle('on', which === 'history');
-    }
-    $('navEvents').onclick = () => showList();
-    $('navHistory').onclick = () => showHistory();
+/* ---------- Rekap ---------- */
+VIEWS.recap=async my=>{
+  title('Rekap bulanan');const g=await api('group_list');if(my!==S.seq)return;const v=V(),now=new Date(),ms=[];
+  for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);ms.push([d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),d.toLocaleDateString('id-ID',{month:'long',year:'numeric'})])}
+  const gs=sel([['','Acara tanpa grup']].concat(g.items.map(x=>[x.id,x.name])),S.rg),mo=sel(ms,S.rm||ms[0][0]),out=h('div');
+  const show=async()=>{S.rg=gs.value;S.rm=mo.value;out.replaceChildren(h('div','sk'));try{const d=await api('recap',{groupId:gs.value,month:mo.value});out.replaceChildren(h('p','muted',d.groupName+' · '+d.total+' acara selesai'));
+    if(!d.total)return out.append(h('div','empty','Belum ada acara selesai pada bulan ini.'));if(!d.rows.length)return out.append(h('div','empty','Belum ada peserta.'));
+    const gr=h('div','grid3');d.rows.forEach(p=>{const b=h('div','bar',[h('i')]);b.firstChild.style.width=p.pct+'%';gr.append(h('div','card',[h('div','row',[h('b','',p.name),h('b',p.pct>=75?'ok':p.pct>=CFGR?'warn':'err',p.pct+'%')]),b,h('div','muted','✅ '+p.hadir+'  ⏰ '+p.terlambat+'  📝 '+p.izin+'  🤒 '+p.sakit+'  ❌ '+p.alpa)]))});out.append(gr)}catch(e){out.replaceChildren(h('p','err',e.message))}};
+  v.append(h('div','card grid3',[lab('Grup',gs),lab('Bulan',mo),h('div','btns',[B('Tampilkan','pri',show),B('⬇ CSV','',async()=>{try{await api('recap_export',{groupId:gs.value,month:mo.value});info('CSV dikirim ke chat bot.')}catch(e){toast(e.message,'err')}})])]),out);show()};
+const CFGR=60;
 
-    function getPos() {
-      return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) return reject(new Error('Perangkat tidak mendukung lokasi'));
-        navigator.geolocation.getCurrentPosition(
-          p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-          err => reject(new Error(err.code === 1 ? 'Izin lokasi ditolak. Aktifkan lokasi lalu coba lagi.' : 'Lokasi tidak bisa diambil')),
-          { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
-      });
-    }
+/* ---------- Riwayat ---------- */
+VIEWS.history=async my=>{
+  title('Riwayat kehadiranku');const d=await api('history');if(my!==S.seq)return;const v=V(),c=d.counts,ring=h('div','ring',[h('b','',c.total?c.pct+'%':'–')]);ring.style.setProperty('--p',c.pct||0);
+  v.append(h('div','card row',[ring,h('div','',[h('div','muted',c.total?cnt(c):'Belum ada riwayat'),c.streak>1&&h('div','ok','🔥 '+c.streak+' kehadiran beruntun'),c.total>=3&&c.pct<CFGR&&h('div','warn','Kehadiranmu masih di bawah '+CFGR+'%. Semangat!')])]));
+  if(!d.items.length)v.append(h('div','empty','Riwayat akan muncul setelah kamu check-in di acara pertama.'));
+  const g=h('div','grid3');d.items.forEach(i=>g.append(h('div','card click',[h('div','row',[h('b','',i.event),bd(i.status)]),h('div','muted',dt(i.time)+(i.note?' · '+i.note:''))],{onclick:()=>i.startAt&&open(i.eventId)})));v.append(g)};
 
-    /* ---------- Daftar acara ---------- */
-    async function showList() {
-      cleanup(); setBack(null); markNav('events');
-      const my = ++state.seq;
-      setStatus('Memuat…');
-      try {
-        const d = await api('events', { filter: state.filter, page: state.page });
-        if (my !== state.seq) return;
-        state.isAdmin = d.isAdmin;
-        setStatus('');
-        const app = $('app'); app.replaceChildren();
+/* ---------- Tema & tampilan ---------- */
+VIEWS.settings=async my=>{
+  title('Tema & tampilan');const v=V();
+  const seg=(opts,cur,fn)=>{const t=h('div','tabs');opts.forEach(([k,x])=>t.append(h('button','tab'+(String(cur)===String(k)?' on':''),x,{onclick:()=>{fn(k);applyTh();run(VIEWS.settings)}})));return t};
+  const sw=h('div','row gap');
+  ACC.forEach(([c,n])=>{const b=h('button','sw'+(TH.acc===c?' on':''),null,{title:n,onclick:()=>{TH.acc=c;applyTh();run(VIEWS.settings)}});b.style.background=c||'#0b7a75';b.setAttribute('aria-label','Warna '+n);sw.append(b)});
+  v.append(
+    h('div','card',[h('b','','Mode'),h('p','muted','“Otomatis” mengikuti tema Telegram atau perangkatmu.'),seg([['auto','Otomatis'],['light','Terang'],['dark','Gelap']],TH.mode,k=>TH.mode=k)]),
+    h('div','card',[h('b','','Warna aksen'),h('p','muted','Dipakai untuk tombol, menu aktif, dan penanda.'),sw]),
+    h('div','card',[h('b','','Ukuran teks'),seg([[14,'Kecil'],[15,'Normal'],[17,'Besar']],TH.fs,k=>TH.fs=+k)]),
+    h('div','card',[h('b','','Kerapatan kartu'),h('p','muted','Ringkas cocok untuk daftar panjang di layar kecil.'),seg([[0,'Nyaman'],[1,'Ringkas']],TH.dense,k=>TH.dense=+k)]),
+    h('div','card hero',[h('div','muted','Pratinjau'),h('h3','','Rapat Mingguan'),h('div','muted','🕒 Sen, 09.00–10.30 · 📍 Ruang 2'),h('div','',[bd('hadir'),ph('open')]),h('div','btns',[B('Check-in sekarang','pri',()=>{})])]),
+    h('div','muted','Di layar lebar menu tampil di samping, di HP menu ada di bawah. Pilihanmu tersimpan di perangkat ini.'),
+    h('div','btns',[B('Kembalikan bawaan','',()=>{Object.assign(TH,{mode:'auto',acc:'',fs:15,dense:0});applyTh();toast('Tampilan dikembalikan','ok');run(VIEWS.settings)})]))};
 
-        const top = el('div', 'btns');
-        top.append(btn('📷 Scan QR check-in', '', scanQr));
-        if (d.isAdmin) top.append(btn('＋ Acara baru', 'sec', () => showForm(null)));
-        app.append(top);
+/* ---------- Log audit ---------- */
+let lp=1;
+VIEWS.log=async my=>{
+  title('Log aktivitas admin');const d=await api('log',{page:lp});if(my!==S.seq)return;const v=V();v.append(h('p','muted',d.total+' catatan · hal. '+d.page+'/'+d.totalPages));
+  if(!d.entries.length)v.append(h('div','empty','Belum ada aktivitas.'));
+  d.entries.forEach(e=>v.append(h('div','card',[h('div','row',[h('b','',ACT[e.action]||e.action),h('span','muted',e.time)]),h('div','muted',e.user+' · '+e.detail)])));
+  v.append(h('div','row',[B('‹ Lebih baru','',()=>{lp--;run(VIEWS.log)},{}),B('Lebih lama ›','',()=>{lp++;run(VIEWS.log)})]));const bs=v.lastChild.querySelectorAll('.btn');bs[0].disabled=d.page<=1;bs[1].disabled=d.page>=d.totalPages};
 
-        const tabs = el('div', 'tabs');
-        [['active', 'Akan datang / berlangsung'], ['past', 'Selesai']].forEach(([k, t]) => {
-          const b = el('button', 'tab' + (state.filter === k ? ' on' : ''), t);
-          b.onclick = () => { state.filter = k; state.page = 1; showList(); };
-          tabs.append(b);
-        });
-        app.append(tabs);
+/* ---------- Data contoh untuk pratinjau ---------- */
+let DA=true;const mi=m=>new Date(Date.now()+m*60000).toISOString();
+const MG=[{id:'g1',name:'Kelas A',members:3,events:3}];
+const ME=[{id:'e1',name:'Rapat Mingguan',description:'Evaluasi program pekan ini.',location:'Ruang 2',startAt:mi(-10),endAt:mi(80),lat:null,lng:null,radius:0,lateAfter:15,phase:'open',creator:'Admin',groupId:'g1',groupName:'Kelas A',inSeries:true,myStatus:'',counts:{hadir:1,terlambat:0,izin:1,sakit:0,alpa:0,belum:1}},
+ {id:'e2',name:'Workshop Desain',description:'',location:'Aula',startAt:mi(1440),endAt:mi(1560),lat:null,lng:null,radius:0,lateAfter:10,phase:'upcoming',creator:'Admin',groupId:'g1',groupName:'Kelas A',inSeries:false,myStatus:'',counts:{hadir:0,terlambat:0,izin:0,sakit:0,alpa:0,belum:3}},
+ {id:'e3',name:'Pelatihan Dasar',description:'',location:'Lab',startAt:mi(-4320),endAt:mi(-4200),lat:null,lng:null,radius:0,lateAfter:15,phase:'closed',creator:'Admin',groupId:'g1',groupName:'Kelas A',inSeries:false,myStatus:'hadir',counts:{hadir:2,terlambat:1,izin:0,sakit:0,alpa:0,belum:0}}];
+const MA=[{id:'a1',userId:'11',name:'Budi Santoso',username:'budi',status:'hadir',time:mi(-8),method:'kode',distance:null,note:''},{id:'a2',userId:'12',name:'Siti Aminah',username:'',status:'izin',time:mi(-60),method:'mandiri',distance:null,note:'Ada acara keluarga'}];
+const sleep=t=>new Promise(r=>setTimeout(r,t));
+async function mock(a,p){await sleep(180);const ev=ME.find(x=>x.id===(p.id||p.eventId));
+  const hist={items:[{eventId:'e3',event:'Pelatihan Dasar',startAt:ME[2].startAt,status:'hadir',time:ME[2].startAt,note:''},{eventId:'e0',event:'Orientasi',startAt:mi(-9000),status:'alpa',time:mi(-9000),note:''}],counts:{hadir:4,terlambat:1,izin:1,sakit:0,alpa:1,belum:0,pct:71,total:7,streak:3}};
+  switch(a){
+  case'dashboard':return{isAdmin:DA,me:{counts:hist.counts,next:ME[0],upcoming:2},insights:[{tone:'ok',text:'🔥 3 kehadiran beruntun. Pertahankan, ya!'},{tone:'info',text:'Check-in "Rapat Mingguan" sedang dibuka. Tinggal scan QR atau ketik kodenya.'}].concat(DA?[{tone:'warn',text:'1 anggota kehadirannya di bawah 60% bulan ini. Mungkin perlu disapa.'}]:[]),admin:DA?{openNow:1,upcoming:2,groups:1,avg:82,risk:[{name:'Dimas Prakoso',pct:40,alpa:3,group:'Kelas A'}]}:undefined};
+  case'events':return{isAdmin:DA,items:ME.filter(e=>p.filter==='past'?e.phase==='closed':e.phase!=='closed'),total:2,page:1,totalPages:1};
+  case'event_get':return{isAdmin:DA,event:ev,mine:ev.myStatus?{status:ev.myStatus,time:mi(-5),note:''}:null,attendees:MA,counts:ev.counts,missing:[{userId:'13',name:'Dimas Prakoso',username:'',label:'belum'}]};
+  case'code':return{code:'482913',expiresIn:60-new Date().getSeconds()};
+  case'checkin':if(p.code!=='482913')throw new Error('Kode salah atau sudah kedaluwarsa. (Pratinjau: pakai 482913)');ME[0].myStatus='hadir';return{status:'hadir',time:mi(0),eventName:ME[0].name,msg:'Mantap, kamu tepat waktu! ✨'};
+  case'absence':ev.myStatus=p.status;return{status:p.status};
+  case'history':return hist;
+  case'suggest':return{enough:true,events:6,median:7,late:10,pct:84};
+  case'group_list':return{items:MG};
+  case'members':return{items:[{id:'m1',userId:'11',name:'Budi Santoso',username:'budi'},{id:'m2',userId:'12',name:'Siti Aminah',username:''},{id:'m3',userId:'13',name:'Dimas Prakoso',username:''}]};
+  case'group_invite':return{code:'a1b2c3d4e5',link:'https://t.me/contoh_bot?start=join_a1b2c3d4e5'};
+  case'recap':return{groupName:'Kelas A',total:4,rows:[{name:'Budi Santoso',hadir:4,terlambat:0,izin:0,sakit:0,alpa:0,pct:100},{name:'Siti Aminah',hadir:2,terlambat:1,izin:1,sakit:0,alpa:0,pct:75},{name:'Dimas Prakoso',hadir:1,terlambat:0,izin:0,sakit:0,alpa:3,pct:25}]};
+  case'log':return{entries:[{time:'2025-01-10 09:12:03',user:'Admin Demo',action:'acara.buat',detail:'Rapat Mingguan'},{time:'2025-01-10 09:20:41',user:'Admin Demo',action:'hadir.ubah',detail:'12 → izin'}],total:2,page:1,totalPages:1};
+  default:throw new Error('Fitur ini hanya berjalan di aplikasi sungguhan (di pratinjau hanya tampilan).')}}
 
-        if (!d.items.length) app.append(el('p', 'empty', 'Belum ada acara.'));
-        d.items.forEach(ev => {
-          const c = el('div', 'card click');
-          const r = el('div', 'row');
-          r.append(el('b', '', ev.name), phaseBadge(ev.phase));
-          c.append(r, el('div', 'hint', '🕒 ' + fmtRange(ev.startAt, ev.endAt)));
-          if (ev.location) c.append(el('div', 'hint', '📍 ' + ev.location));
-          if (ev.myStatus) c.append(badge(ev.myStatus));
-          if (ev.counts) c.append(el('div', 'hint', countsLine(ev.counts)));
-          c.onclick = () => showDetail(ev.id);
-          app.append(c);
-        });
-
-        const pg = el('div', 'pager');
-        const prev = btn('‹ Sebelumnya', 'sec', () => { state.page--; showList(); });
-        const next = btn('Berikutnya ›', 'sec', () => { state.page++; showList(); });
-        prev.disabled = d.page <= 1; next.disabled = d.page >= d.totalPages;
-        if (d.totalPages > 1) { pg.append(prev, el('span', 'hint', d.page + '/' + d.totalPages), next); app.append(pg); }
-      } catch (e) { if (my === state.seq) setStatus('Error: ' + e.message); }
-    }
-
-    /* ---------- Check-in ---------- */
-    function scanQr() {
-      if (!tg.showScanQrPopup) {
-        return tg.showAlert('Versi Telegram Anda belum mendukung pemindai QR. Buka acara lalu masukkan kode manual.');
-      }
-      tg.showScanQrPopup({ text: 'Arahkan kamera ke QR acara' }, text => {
-        const m = /^ABS\|([0-9a-f-]{36})\|(\d{6})$/.exec(String(text).trim());
-        if (!m) { setStatus('QR itu bukan QR absensi'); return false; }  // lanjut memindai
-        setTimeout(() => doCheckin(m[1], m[2]), 0);
-        return true;                                                     // tutup pemindai
-      });
-    }
-
-    async function doCheckin(eventId, code) {
-      if (state.busy) return;
-      state.busy = true;
-      setStatus('Memproses check-in…');
-      try {
-        let r;
-        try {
-          r = await api('checkin', { eventId, code });
-        } catch (e) {
-          if (!(e.data && e.data.needLocation)) throw e;
-          setStatus('Mengambil lokasi…');
-          const pos = await getPos();
-          r = await api('checkin', { eventId, code, lat: pos.lat, lng: pos.lng });
-        }
-        hapt('success'); setStatus('');
-        tg.showAlert((r.status === 'terlambat' ? '⏰ Tercatat TERLAMBAT' : '✅ Check-in berhasil: HADIR') +
-          ' pukul ' + fmtTime(r.time), () => showDetail(eventId));
-      } catch (e) { hapt('error'); setStatus('Error: ' + e.message); }
-      state.busy = false;
-    }
-
-    async function sendAbsence(eventId, status, note) {
-      if (state.busy) return;
-      state.busy = true;
-      try {
-        await api('absence', { eventId, status, note });
-        hapt('success');
-        await showDetail(eventId);
-      } catch (e) { hapt('error'); setStatus('Error: ' + e.message); }
-      state.busy = false;
-    }
-
-    /* ---------- Detail acara ---------- */
-    async function showDetail(id) {
-      cleanup(); setBack(showList); markNav('events');
-      const my = ++state.seq;
-      setStatus('Memuat…');
-      try {
-        const d = await api('event_get', { id });
-        if (my !== state.seq) return;
-        state.isAdmin = d.isAdmin;
-        setStatus('');
-        const ev = d.event, app = $('app');
-        app.replaceChildren();
-        app.append(el('h3', '', ev.name));
-
-        const meta = el('div', 'card');
-        meta.append(phaseBadge(ev.phase), el('div', '', '🕒 ' + fmtRange(ev.startAt, ev.endAt)));
-        if (ev.location) meta.append(el('div', '', '📍 ' + ev.location));
-        if (ev.description) meta.append(el('div', 'hint', ev.description));
-        meta.append(el('div', 'hint', 'Dianggap terlambat jika check-in setelah ' +
-          fmtTime(new Date(ev.startAt).getTime() + ev.lateAfter * 60000)));
-        if (ev.radius > 0) meta.append(el('div', 'hint', '📍 Check-in hanya dalam radius ' + ev.radius + ' m dari lokasi acara'));
-        app.append(meta);
-
-        app.append(participantBox(ev, d.mine));
-        if (d.isAdmin) app.append(adminBox(ev, d));
-      } catch (e) { if (my === state.seq) setStatus('Error: ' + e.message); }
-    }
-
-    function participantBox(ev, mine) {
-      const box = el('div', 'card');
-      if (mine && (mine.status === 'hadir' || mine.status === 'terlambat')) {
-        box.append(el('div', 'ok', '✅ Anda tercatat ' + LABEL[mine.status] + ' pukul ' + fmtTime(mine.time)));
-        return box;
-      }
-      if (mine) box.append(el('div', 'hint', 'Status Anda: ' + LABEL[mine.status] + (mine.note ? ' — ' + mine.note : '')));
-
-      if (ev.phase === 'open') {
-        const code = field('input', 'Kode 6 digit', { inputMode: 'numeric', maxLength: 6 });
-        const row = el('div', 'btns');
-        row.append(btn('Check-in', '', () => {
-          if (code.value.replace(/\D/g, '').length !== 6) return setStatus('Kode harus 6 digit');
-          doCheckin(ev.id, code.value);
-        }), btn('📷 Scan QR', 'sec', scanQr));
-        box.append(labeled('Masukkan kode dari panitia', code), row);
-      } else if (ev.phase === 'upcoming') {
-        box.append(el('div', 'hint', 'Check-in dibuka 30 menit sebelum acara dimulai.'));
-      } else {
-        box.append(el('div', 'hint', ev.phase === 'closed' ? 'Acara sudah ditutup.' : 'Waktu acara sudah berakhir.'));
-      }
-
-      if (ev.phase === 'open' || ev.phase === 'upcoming') {
-        const note = field('input', 'Alasan (opsional)', { maxLength: 200 });
-        const row = el('div', 'btns');
-        row.append(btn('📝 Izin', 'sec', () => sendAbsence(ev.id, 'izin', note.value)),
-                   btn('🤒 Sakit', 'sec', () => sendAbsence(ev.id, 'sakit', note.value)));
-        box.append(el('hr'), labeled('Tidak bisa hadir?', note), row);
-      }
-      return box;
-    }
-
-    /* ---------- Panel admin ---------- */
-    function adminBox(ev, d) {
-      const box = el('div', 'card');
-      box.append(el('b', '', 'Panel admin'), el('div', 'hint', countsLine(d.counts)));
-
-      const row = el('div', 'btns');
-      row.append(
-        btn('📲 Kode / QR', '', () => showCode(ev.id, ev.name)),
-        btn('✎ Edit', 'sec', () => showForm(ev)),
-        btn(ev.phase === 'closed' ? '🔓 Buka lagi' : '🔒 Tutup', 'sec', async () => {
-          try { await api('event_status', { id: ev.id, status: ev.phase === 'closed' ? 'open' : 'closed' }); showDetail(ev.id); }
-          catch (e) { setStatus('Error: ' + e.message); }
-        }),
-        btn('⬇ CSV', 'sec', async () => {
-          setStatus('Membuat CSV…');
-          try { await api('export', { id: ev.id }); setStatus(''); tg.showAlert('CSV dikirim ke chat bot.'); }
-          catch (e) { setStatus('Error: ' + e.message); }
-        }),
-        btn('🗑 Hapus', 'danger', () => tg.showConfirm('Hapus acara beserta seluruh data kehadirannya?', async ok => {
-          if (!ok) return;
-          try { await api('event_delete', { id: ev.id }); showList(); }
-          catch (e) { setStatus('Error: ' + e.message); }
-        })));
-      box.append(row);
-
-      box.append(el('b', '', 'Peserta (' + d.attendees.length + ')'));
-      if (!d.attendees.length) box.append(el('div', 'hint', 'Belum ada yang tercatat.'));
-      d.attendees.forEach(a => {
-        const r = el('div', 'att');
-        const head = el('div', 'row');
-        head.append(el('span', '', a.name + (a.username ? ' @' + a.username : '')), badge(a.status));
-        r.append(head, el('div', 'hint', fmtTime(a.time) + ' · ' + a.method +
-          (a.distance != null ? ' · ' + a.distance + ' m' : '') + (a.note ? ' · ' + a.note : '')));
-
-        const sel = el('select');
-        Object.keys(LABEL).forEach(k => { const o = el('option', '', LABEL[k]); o.value = k; sel.append(o); });
-        sel.value = a.status;
-        sel.onchange = async () => {
-          try {
-            await api('att_set', { eventId: ev.id, userId: a.userId, name: a.name, status: sel.value, note: a.note });
-            showDetail(ev.id);
-          } catch (e) { setStatus('Error: ' + e.message); sel.value = a.status; }
-        };
-        const del = el('button', 'link-btn', ' ✕ hapus');
-        del.onclick = () => tg.showConfirm('Hapus ' + a.name + ' dari daftar?', async ok => {
-          if (!ok) return;
-          try { await api('att_delete', { id: a.id }); showDetail(ev.id); }
-          catch (e) { setStatus('Error: ' + e.message); }
-        });
-        const act = el('div'); act.append(sel, del);
-        r.append(act);
-        box.append(r);
-      });
-
-      // Tambah / ubah manual
-      const uid = field('input', 'ID Telegram (angka)', { inputMode: 'numeric' });
-      const nm = field('input', 'Nama', { maxLength: 100 });
-      const st = el('select');
-      Object.keys(LABEL).forEach(k => { const o = el('option', '', LABEL[k]); o.value = k; st.append(o); });
-      const nt = field('input', 'Catatan (opsional)', { maxLength: 200 });
-      box.append(el('hr'), el('b', '', 'Tambah / ubah manual'), uid, nm, st, nt,
-        btn('Simpan', 'sec', async () => {
-          try {
-            await api('att_set', { eventId: ev.id, userId: uid.value.trim(), name: nm.value, status: st.value, note: nt.value });
-            hapt('success'); showDetail(ev.id);
-          } catch (e) { hapt('error'); setStatus('Error: ' + e.message); }
-        }));
-      return box;
-    }
-
-    /* ---------- Kode & QR (admin) ---------- */
-    function showCode(id, name) {
-      cleanup(); setBack(() => showDetail(id));
-      const app = $('app'); app.replaceChildren();
-      const img = el('img', 'qr'); img.alt = 'QR absensi';
-      const codeEl = el('div', 'bigcode', '······');
-      const cd = el('div', 'hint center', '');
-      app.append(el('h3', '', name), img, codeEl, cd,
-        el('p', 'hint center', 'Tampilkan layar ini ke peserta. Kode berganti otomatis.'));
-
-      let exp = 0, fetching = false;
-      async function refresh() {
-        if (fetching) return;
-        fetching = true;
-        try {
-          const d = await api('code', { id });
-          exp = Date.now() + d.expiresIn * 1000;
-          codeEl.textContent = d.code.slice(0, 3) + ' ' + d.code.slice(3);
-          const q = qrcode(0, 'M');
-          q.addData('ABS|' + id + '|' + d.code);
-          q.make();
-          img.src = q.createDataURL(8, 4);
-          setStatus('');
-        } catch (e) {
-          exp = Date.now() + 5000;          // jangan menembak ulang tiap detik saat error
-          setStatus('Error: ' + e.message);
-        }
-        fetching = false;
-      }
-      state.timer = setInterval(() => {
-        const left = Math.ceil((exp - Date.now()) / 1000);
-        if (left <= 0) refresh(); else cd.textContent = 'Kode berganti dalam ' + left + ' dtk';
-      }, 1000);
-      refresh();
-    }
-
-    /* ---------- Form acara (admin) ---------- */
-    function showForm(ev) {
-      cleanup(); setBack(ev ? () => showDetail(ev.id) : showList);
-      const app = $('app'); app.replaceChildren();
-      app.append(el('h3', '', ev ? 'Edit acara' : 'Acara baru'));
-
-      const start = new Date(); start.setMinutes(0, 0, 0); start.setHours(start.getHours() + 1);
-      const name = field('input', 'Nama acara / kegiatan', { maxLength: 100, value: ev ? ev.name : '' });
-      const desc = field('textarea', 'Deskripsi (opsional)', { rows: 2, maxLength: 300, value: ev ? ev.description : '' });
-      const loc = field('input', 'Lokasi (opsional)', { maxLength: 100, value: ev ? ev.location : '' });
-      const s = field('input', '', { type: 'datetime-local', value: toLocalInput(ev ? ev.startAt : start) });
-      const e = field('input', '', { type: 'datetime-local', value: toLocalInput(ev ? ev.endAt : start.getTime() + 2 * 3600000) });
-      const late = field('input', '', { type: 'number', min: 0, max: 600, value: ev ? ev.lateAfter : 15 });
-      const lat = field('input', 'Lintang (lat)', { inputMode: 'decimal', value: ev && ev.lat != null ? ev.lat : '' });
-      const lng = field('input', 'Bujur (lng)', { inputMode: 'decimal', value: ev && ev.lng != null ? ev.lng : '' });
-      const rad = field('input', '', { type: 'number', min: 0, max: 5000, value: ev ? ev.radius : 0 });
-
-      app.append(name, desc, loc, labeled('Mulai', s), labeled('Selesai', e),
-        labeled('Dianggap terlambat setelah (menit dari waktu mulai)', late),
-        el('hr'), el('b', '', 'Batasi area (opsional)'),
-        el('div', 'hint', 'Isi radius lebih dari 0 agar peserta hanya bisa check-in di sekitar titik ini.'),
-        btn('📍 Pakai lokasi saya sekarang', 'sec', async () => {
-          try { setStatus('Mengambil lokasi…'); const p = await getPos();
-                lat.value = p.lat.toFixed(6); lng.value = p.lng.toFixed(6); setStatus(''); }
-          catch (err) { setStatus('Error: ' + err.message); }
-        }), lat, lng, labeled('Radius (meter, 0 = tanpa batas area)', rad));
-
-      app.append(btn(ev ? 'Simpan perubahan' : 'Buat acara', '', async () => {
-        if (!name.value.trim()) return setStatus('Nama acara wajib diisi');
-        if (!s.value || !e.value) return setStatus('Waktu mulai dan selesai wajib diisi');
-        if (state.busy) return;
-        state.busy = true;
-        try {
-          const r = await api('event_save', {
-            id: ev ? ev.id : '', name: name.value, description: desc.value, location: loc.value,
-            startAt: new Date(s.value).toISOString(), endAt: new Date(e.value).toISOString(),
-            lateAfter: late.value, lat: lat.value, lng: lng.value, radius: rad.value
-          });
-          hapt('success'); setStatus('');
-          state.busy = false;
-          showDetail(r.id);
-        } catch (err) { hapt('error'); setStatus('Error: ' + err.message); state.busy = false; }
-      }));
-    }
-
-    /* ---------- Riwayat saya ---------- */
-    async function showHistory() {
-      cleanup(); setBack(null); markNav('history');
-      const my = ++state.seq;
-      setStatus('Memuat…');
-      try {
-        const d = await api('history');
-        if (my !== state.seq) return;
-        setStatus('');
-        const app = $('app'); app.replaceChildren();
-        app.append(el('h3', '', 'Riwayat kehadiran saya'), el('div', 'hint', countsLine(d.counts)));
-        if (!d.items.length) app.append(el('p', 'empty', 'Belum ada riwayat.'));
-        d.items.forEach(it => {
-          const c = el('div', 'card click');
-          const r = el('div', 'row');
-          r.append(el('b', '', it.event), badge(it.status));
-          c.append(r, el('div', 'hint', fmtDT(it.time) + (it.note ? ' · ' + it.note : '')));
-          if (it.startAt) c.onclick = () => showDetail(it.eventId);
-          app.append(c);
-        });
-      } catch (e) { if (my === state.seq) setStatus('Error: ' + e.message); }
-    }
-
-    /* ---------- Init ---------- */
-    const u = tg.initDataUnsafe.user;
-    $('hello').textContent = 'Halo, ' + (u ? u.first_name : 'pengguna') + '!';
-    showList();
-  </script>
+/* ---------- Mulai ---------- */
+if(DEMO){$('demo').hidden=false;const rb=$('role');const sync=()=>{rb.textContent='Lihat sebagai: '+(DA?'Admin':'Peserta')};sync();rb.onclick=()=>{DA=!DA;S.admin=DA;sync();go(S.view==='home'||!DA&&['groups','recap','log'].includes(S.view)?'home':S.view)}}
+loadTh();applyTh();
+const off=()=>{$('off').hidden=navigator.onLine};addEventListener('online',off);addEventListener('offline',off);off();
+$('thm').onclick=()=>{S.view='settings';nav();run(VIEWS.settings)};
+$('rf').onclick=()=>{const c=S.cur;if(c)run(c[0],...c[1])};
+S.admin=DEMO?DA:false;nav();go('home');
+</script>
 </body>
 </html>
