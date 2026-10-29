@@ -17,6 +17,7 @@
 :root[data-dense="1"] .card{padding:10px;margin-bottom:8px}
 .sw{width:36px;height:36px;border-radius:50%;border:3px solid transparent;cursor:pointer;padding:0}.sw.on{border-color:var(--tx)}
 #off{background:var(--err);color:#fff;text-align:center;padding:5px;font-size:13px}
+[hidden]{display:none!important}
 *{box-sizing:border-box}html,body{margin:0}body{font:var(--fs,15px)/1.5 var(--font);background:var(--bg);color:var(--tx);-webkit-tap-highlight-color:transparent}
 h1,h2,h3{margin:0;line-height:1.25}h1{font-size:22px}h2{font-size:19px}h3{font-size:16px}p{margin:6px 0}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -75,6 +76,7 @@ details summary{cursor:pointer;color:var(--pri);margin:6px 0}
 .btn{transition:transform .08s,border-color .15s}.btn:active{transform:scale(.97)}
 :root[data-style=ramah]{--r:20px;--font:"Nunito","Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
 :root[data-style=ramah] .btn,:root[data-style=ramah] .tab{border-radius:999px}:root[data-style=ramah] input,:root[data-style=ramah] select,:root[data-style=ramah] textarea{border-radius:14px}
+main h3{margin:18px 0 8px}.outside{max-width:520px;margin:8vh auto 0}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -395,8 +397,8 @@ loadTh();applyTh();
 const off=()=>{$('off').hidden=navigator.onLine};addEventListener('online',off);addEventListener('offline',off);off();
 $('thm').onclick=()=>{S.view='settings';nav();run(VIEWS.settings)};
 $('rf').onclick=()=>{const c=S.cur;if(c)run(c[0],...c[1])};
-if(OUTSIDE){$('nav').style.display='none';$('rf').hidden=true;$('thm').hidden=true;title('Absensi Pro');
-  V().append(h('div','card hero',[h('h2','','Buka lewat Telegram ya 👋'),h('p','','Aplikasi ini berjalan di dalam Telegram supaya akunmu terverifikasi otomatis. Buka bot absensi, lalu tekan tombol “Buka Absensi”.')]))}
+if(OUTSIDE){$('nav').style.display='none';document.querySelector('.shell').style.gridTemplateColumns='1fr';$('rf').hidden=true;$('thm').hidden=true;title('Absensi Pro');
+  V().append(h('div','card hero outside',[h('h2','','Buka lewat Telegram ya 👋'),h('p','','Aplikasi ini berjalan di dalam Telegram supaya akunmu terverifikasi otomatis. Buka bot absensi, lalu tekan tombol “Buka Absensi”.')]))}
 else{S.admin=DEMO?DA:false;nav();go('home')}
 </script>
 </body>
