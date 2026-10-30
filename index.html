@@ -149,7 +149,7 @@ function title(t){$('ttl').textContent=t;$('bk').hidden=!S.back;try{S.back?tg.Ba
 $('bk').onclick=()=>S.back&&S.back();
 try{tg.BackButton.onClick(()=>S.back&&S.back())}catch(e){}
 const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('Tersalin','ok')}catch(e){prompt('Salin manual:',t)}};
-function pos(){return new Promise((ok,no)=>{if(!navigator.geolocation)return no(new Error('Perangkat tidak mendukung lokasi'));navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude}),e=>no(new Error(e.code===1?'Izin lokasi ditolak. Aktifkan lokasi lalu coba lagi.':'Lokasi belum bisa diambil')),{enableHighAccuracy:true,timeout:12000,maximumAge:0})})}
+function pos(){return new Promise((ok,no)=>{if(!navigator.geolocation)return no(new Error('Perangkat tidak mendukung lokasi'));navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),e=>no(new Error(e.code===1?'Izin lokasi ditolak. Aktifkan lokasi lalu coba lagi.':'Lokasi belum bisa diambil')),{enableHighAccuracy:true,timeout:12000,maximumAge:0})})}
 
 const DEVID=(()=>{try{let k=localStorage.getItem('abs_dev');if(!k){k=(crypto.randomUUID?crypto.randomUUID():String(Math.random()).slice(2)+Date.now()).replace(/[^A-Za-z0-9]/g,'').slice(0,32);localStorage.setItem('abs_dev',k)}return k}catch(e){return 'nodev'+String(Math.random()).slice(2,12)}})();
 async function api(a,p={}){
@@ -217,7 +217,7 @@ function scan(){
 }
 async function checkin(id,code){
   if(S.busy)return false;S.busy=true;let done=false;
-  try{let r;try{r=await api('checkin',{eventId:id,code})}catch(e){if(!(e.data&&e.data.needLocation))throw e;toast('Mengambil lokasimu…');const p=await pos();r=await api('checkin',{eventId:id,code,lat:p.lat,lng:p.lng})}
+  try{let r;try{r=await api('checkin',{eventId:id,code})}catch(e){if(!(e.data&&e.data.needLocation))throw e;toast('Mengambil lokasimu…');const p=await pos();r=await api('checkin',{eventId:id,code,lat:p.lat,lng:p.lng,acc:p.acc})}
     hap('success');done=true;info((r.status==='terlambat'?'⏰ ':'✅ ')+r.msg+' ('+tm(r.time)+')'+(r.flagged?'\nCatatan: perangkat ini juga dipakai peserta lain, panitia akan meninjau.':''),()=>open(id))}
   catch(e){hap('error');toast(e.message,'err')}S.busy=false;return done}
 async function absence(id,status,note){if(S.busy)return;S.busy=true;try{await api('absence',{eventId:id,status,note});hap('success');toast(status==='sakit'?'Tercatat sakit. Semoga lekas pulih ya 💛':'Oke, kamu tercatat izin. Terima kasih sudah mengabari 🙏','ok');open(id)}catch(e){hap('error');toast(e.message,'err')}S.busy=false}
@@ -227,7 +227,7 @@ async function detail(my,id){
   const d=await api('event_get',{id});if(my!==S.seq)return;S.admin=d.isAdmin;nav();
   const ev=d.event,past=ev.phase==='ended'||ev.phase==='closed',v=V();S.back=()=>go('events');title(ev.name);
   v.append(h('div','card',[ph(ev.phase),ev.groupName&&h('span','bd grp','👥 '+ev.groupName),h('p','','🕒 '+rng(ev.startAt,ev.endAt)),ev.location&&h('p','','📍 '+ev.location),ev.description&&h('p','muted',ev.description),
-    h('p','muted','Terlambat jika check-in setelah '+tm(new Date(ev.startAt).getTime()+ev.lateAfter*60000)+(ev.radius?' · wajib berada dalam radius '+ev.radius+' m':''))]));
+    h('p','muted','Terlambat jika check-in setelah '+tm(new Date(ev.startAt).getTime()+ev.lateAfter*60000)+(ev.effRadius?' · acara tatap muka: wajib berada dalam radius '+ev.effRadius+' m dari lokasi (lokasimu diminta saat check-in)':''))]));
   const bx=h('div','card'),m=d.mine;
   if(m&&(m.status==='hadir'||m.status==='terlambat'))bx.append(h('b','ok','✅ Kamu tercatat '+L[m.status].toLowerCase()+' pukul '+tm(m.time)));
   else{
@@ -242,23 +242,23 @@ async function detail(my,id){
   if(past&&!d.isAdmin&&!(m&&(m.status==='hadir'||m.status==='terlambat'))){const ws=sel([['hadir','Saya hadir'],['izin','Saya izin'],['sakit','Saya sakit']],'hadir'),rs=fld('input','Jelaskan singkat (min. 5 huruf)',{maxLength:200});
     bx.append(h('hr'),h('b','','Status ini keliru?'),h('p','muted','Ajukan koreksi, maksimal 14 hari setelah acara. Admin akan meninjau dan kamu dikabari lewat Telegram.'),lab('Seharusnya',ws),lab('Alasan',rs),
       h('div','btns',[B('Kirim pengajuan','',async()=>{if(S.busy)return;S.busy=true;try{await api('corr_request',{eventId:ev.id,wanted:ws.value,reason:rs.value});hap('success');S.busy=false;info('Pengajuan terkirim. Kamu akan dikabari begitu admin memutuskan.',()=>go('corr'))}catch(e){S.busy=false;hap('error');toast(e.message,'err')}})]))}
-  v.append(bx);if(d.isAdmin)v.append(adminBox(ev,d));
+  v.append(bx);if(d.isAdmin||d.isStaff)v.append(adminBox(ev,d));
 }
 function delAsk(ev){const run1=async s=>{try{await api('event_delete',{id:ev.id,scope:s});toast('Acara dihapus','ok');go('events')}catch(e){toast(e.message,'err')}};
   if(ev.inSeries&&!DEMO&&tg.showPopup)tg.showPopup({title:'Hapus acara',message:'Acara ini bagian dari seri berulang.',buttons:[{id:'one',type:'destructive',text:'Hanya ini'},{id:'series',type:'destructive',text:'Seri mendatang'},{type:'cancel'}]},i=>{if(i==='one'||i==='series')run1(i)});
   else ask('Hapus acara beserta seluruh data kehadirannya?',ok=>ok&&run1('one'))}
 function adminBox(ev,d){
-  const bx=h('div','card'),c=d.counts,tot=d.attendees.length+(d.missing?d.missing.length:0),got=c.hadir+c.terlambat;
+  const adm=d.isAdmin,bx=h('div','card'),c=d.counts,tot=d.attendees.length+(d.missing?d.missing.length:0),got=c.hadir+c.terlambat;
   const set=async(uid,nm,s,note)=>{try{await api('att_set',{eventId:ev.id,userId:uid,name:nm,status:s,note:note||''});toast('Status diperbarui','ok');open(ev.id)}catch(e){toast(e.message,'err')}};
-  bx.append(h('div','row',[h('b','','Panel admin'),h('span','muted',tot?Math.round(got/tot*100)+'% hadir':'')]),h('div','bar',[h('i','',null,{})]),h('div','muted',cnt(c)));
+  bx.append(h('div','row',[h('b','',adm?'Panel admin':'Panel petugas'),h('span','muted',tot?Math.round(got/tot*100)+'% hadir':'')]),h('div','bar',[h('i','',null,{})]),h('div','muted',cnt(c)));
   bx.querySelector('.bar i').style.width=(tot?got/tot*100:0)+'%';
-  bx.append(h('div','btns',[B('📲 Kode / QR','pri',()=>codeView(ev)),B('📄 Laporan','',()=>run(report,ev.id)),B('✎ Edit','',()=>form(ev)),
-    (ev.phase==='closed'&&new Date(ev.endAt)<Date.now())?null:B(ev.phase==='closed'?'🔓 Buka lagi':'🔒 Tutup','',async()=>{try{await api('event_status',{id:ev.id,status:ev.phase==='closed'?'open':'closed'});open(ev.id)}catch(e){toast(e.message,'err')}}),
-    B('⬇ CSV','',async()=>{try{await api('export',{id:ev.id});info('CSV dikirim ke chat bot.')}catch(e){toast(e.message,'err')}}),B('📑 PDF','',()=>sendPdf('event_pdf',{id:ev.id})),B('🗑 Hapus','dng',()=>delAsk(ev))]));
+  bx.append(h('div','btns',[B('📲 Kode / QR','pri',()=>codeView(ev)),adm&&B('📄 Laporan','',()=>run(report,ev.id)),adm&&B('✎ Edit','',()=>form(ev)),
+    !adm||(ev.phase==='closed'&&new Date(ev.endAt)<Date.now())?null:B(ev.phase==='closed'?'🔓 Buka lagi':'🔒 Tutup','',async()=>{try{await api('event_status',{id:ev.id,status:ev.phase==='closed'?'open':'closed'});open(ev.id)}catch(e){toast(e.message,'err')}}),
+    adm&&B('⬇ CSV','',async()=>{try{await api('export',{id:ev.id});info('CSV dikirim ke chat bot.')}catch(e){toast(e.message,'err')}}),adm&&B('📑 PDF','',()=>sendPdf('event_pdf',{id:ev.id})),adm&&B('🗑 Hapus','dng',()=>delAsk(ev))].filter(Boolean)));
   bx.append(h('h3','','Tercatat ('+d.attendees.length+')'));if(!d.attendees.length)bx.append(h('p','muted','Belum ada yang check-in.'));
   d.attendees.forEach(a=>{const s=sel(SET.map(k=>[k,L[k]]),a.status);s.onchange=()=>set(a.userId,a.name,s.value,a.note);
     const x=h('button','btn','✕ hapus',{onclick:()=>ask('Hapus '+a.name+' dari daftar?',async ok=>{if(!ok)return;try{await api('att_delete',{id:a.id});open(ev.id)}catch(e){toast(e.message,'err')}})});
-    bx.append(h('div','att',[h('div','row',[h('span','',a.name+(a.username?' @'+a.username:'')),bd(a.status)]),h('div','muted',tm(a.time)+' · '+a.method+(a.distance!=null?' · '+a.distance+' m':'')+(a.note?' · '+a.note:'')),h('div','row gap',[s,x])]))});
+    bx.append(h('div','att',[h('div','row',[h('span','',a.name+(a.username?' @'+a.username:'')),bd(a.status)]),h('div','muted',tm(a.time)+' · '+a.method+(a.distance!=null?' · '+a.distance+' m':'')+(a.note?' · '+a.note:'')),h('div','row gap',[s,adm&&x])]))});
   if(d.missing&&d.missing.length){bx.append(h('h3','','Belum tercatat ('+d.missing.length+')'));
     d.missing.forEach(m=>{const s=sel([['','Ubah status…']].concat(SET.map(k=>[k,L[k]])),'');s.onchange=()=>s.value&&set(m.userId,m.name,s.value,'diubah admin');bx.append(h('div','att',[h('div','row',[h('span','',m.name),bd(m.label)]),s]))})}
   const u=fld('input','ID Telegram (angka)',{inputMode:'numeric'}),n=fld('input','Nama',{maxLength:100}),s=sel(SET.map(k=>[k,L[k]]),'hadir'),t=fld('input','Catatan (opsional)',{maxLength:200});
@@ -371,8 +371,12 @@ VIEWS.health=async my=>{
   const ov=d.bad?['err','Ada '+d.bad+' hal yang perlu segera dibereskan']:d.warn?['warn',d.warn+' hal perlu diperhatikan']:['ok','Semua berjalan normal'];
   const bar=h('div','bar',[h('i')]);bar.firstChild.style.width=Math.min(100,d.usedPct)+'%';
   v.append(h('div','card hero',[h('div','muted','Kondisi saat ini'),h('h2',ov[0],ov[1]),h('div','muted','Kapasitas spreadsheet terpakai '+d.usedPct+'%'),bar]));
+  const sc=h('div','card',[h('b','','Petugas'),h('p','muted','Petugas boleh menampilkan kode/QR dan mengubah status kehadiran. Mereka tidak bisa menghapus, mengedit acara, atau mengelola grup.')]);
+  const sl=h('div'),ni=fld('input','ID Telegram petugas (angka)',{inputMode:'numeric',id:'staffid'});
+  const loadS=async()=>{try{const r=await api('staff_list');sl.replaceChildren(...(r.items.length?r.items.map(i=>h('div','att row',[h('span','','ID '+i),B('Cabut','',()=>ask('Cabut peran petugas ID '+i+'?',async ok=>{if(!ok)return;try{await api('staff_set',{id:i,on:false});loadS()}catch(e){toast(e.message,'err')}}))])):[h('p','muted','Belum ada petugas.')]))}catch(e){sl.replaceChildren(h('p','err',e.message))}};
+  sc.append(sl,ni,h('div','btns',[B('＋ Jadikan petugas','pri',async()=>{try{await api('staff_set',{id:ni.value.trim(),on:true});ni.value='';toast('Petugas ditambahkan','ok');loadS()}catch(e){toast(e.message,'err')}})]));loadS();
   const TI={ok:'✅',warn:'⚠️',bad:'⛔',info:'ℹ️'},g=h('div','grid3');
-  d.checks.forEach(c=>g.append(h('div','card',[h('div','row',[h('b','',c.label),h('span',c.tone==='bad'?'err':c.tone==='warn'?'warn':'ok',TI[c.tone]||'')]),h('p','muted',c.detail)])));v.append(g);
+  d.checks.forEach(c=>g.append(h('div','card',[h('div','row',[h('b','',c.label),h('span',c.tone==='bad'?'err':c.tone==='warn'?'warn':'ok',TI[c.tone]||'')]),h('p','muted',c.detail)])));v.append(g,sc);
   v.append(h('div','btns',[B('💾 Backup sekarang','pri',()=>sysAct('backup_now','Backup dibuat di Google Drive.')),B('🗄 Arsipkan data lama','',()=>ask('Pindahkan acara lebih dari 12 bulan dan log lebih dari 6 bulan ke spreadsheet arsip? Data yang diarsipkan tidak lagi masuk rekap.',ok=>ok&&sysAct('archive_now',null))),B('🔐 Verifikasi log','',verifyLog)]))};
 async function sysAct(a,msg){if(S.busy)return;S.busy=true;try{const r=await api(a);toast(msg||('Selesai: '+r.events+' acara, '+r.attendance+' kehadiran, '+r.log+' log diarsipkan'),'ok')}catch(e){toast(e.message,'err')}S.busy=false;run(VIEWS.health)}
 async function verifyLog(){try{const r=await api('log_verify');info(r.ok?'🔐 Log utuh. '+r.checked+' catatan terverifikasi'+(r.legacy?' ('+r.legacy+' catatan lama belum bertanda).':'.'):'⚠️ Ada perubahan di baris '+r.broken.row+' ('+r.broken.time+', '+r.broken.action+'). Periksa riwayat revisi Sheet.')}catch(e){toast(e.message,'err')}}
@@ -404,6 +408,7 @@ VIEWS.log=async my=>{
 /* ---------- Data contoh untuk pratinjau ---------- */
 let DA=true;const mi=m=>new Date(Date.now()+m*60000).toISOString();
 const MG=[{id:'g1',name:'Kelas A',members:3,events:3,lateAfter:null,minPct:60}];
+const MS=['13'];
 const MC=[{id:'c1',eventId:'e3',userId:'12',name:'Siti Aminah',event:'Pelatihan Dasar',wanted:'hadir',reason:'Tadi lupa scan, saya ada di lokasi',status:'pending',createdAt:mi(-300),decidedBy:'',decidedAt:'',current:'belum'},{id:'c0',eventId:'e0',userId:'11',name:'Budi Santoso',event:'Orientasi',wanted:'sakit',reason:'Demam, ada surat dokter',status:'approved',createdAt:mi(-5000),decidedBy:'Admin Demo',decidedAt:mi(-4900),current:'alpa'}];
 const ME=[{id:'e1',name:'Rapat Mingguan',description:'Evaluasi program pekan ini.',location:'Ruang 2',startAt:mi(-10),endAt:mi(80),lat:null,lng:null,radius:0,lateAfter:15,phase:'open',creator:'Admin',groupId:'g1',groupName:'Kelas A',inSeries:true,myStatus:'',counts:{hadir:1,terlambat:0,izin:1,sakit:0,alpa:0,belum:1}},
  {id:'e2',name:'Workshop Desain',description:'',location:'Aula',startAt:mi(1440),endAt:mi(1560),lat:null,lng:null,radius:0,lateAfter:10,phase:'upcoming',creator:'Admin',groupId:'g1',groupName:'Kelas A',inSeries:false,myStatus:'',counts:{hadir:0,terlambat:0,izin:0,sakit:0,alpa:0,belum:3}},
@@ -426,10 +431,12 @@ async function mock(a,p){await sleep(180);const ev=ME.find(x=>x.id===(p.id||p.ev
   case'corr_list':return{isAdmin:DA,items:DA?(p.filter==='all'?MC:MC.filter(x=>x.status==='pending')):MC.filter(x=>x.userId==='11'),pending:MC.filter(x=>x.status==='pending').length};
   case'corr_request':if(String(p.reason||'').trim().length<5)throw new Error('Tulis alasannya singkat saja, minimal 5 huruf.');MC.unshift({id:'c'+Date.now(),eventId:p.eventId,userId:'11',name:'Budi Santoso',event:ev?ev.name:'Acara',wanted:p.wanted,reason:p.reason,status:'pending',createdAt:mi(0),decidedBy:'',decidedAt:'',current:'belum'});return{pending:true};
   case'corr_decide':{const c=MC.find(x=>x.id===p.id);c.status=p.decision==='approve'?'approved':'rejected';c.decidedBy='Admin Demo';return{status:c.status}}
+  case'staff_list':return{items:MS};
+  case'staff_set':if(!/^\d{1,15}$/.test(p.id))throw new Error('ID harus angka');{const i=MS.indexOf(p.id);if(p.on&&i<0)MS.push(p.id);if(!p.on&&i>=0)MS.splice(i,1)}return{};
   case'log_verify':return{ok:true,checked:3,legacy:0,total:3};
   case'backup_now':return{kept:1};
   case'archive_now':return{events:0,attendance:0,log:0};
-  case'health':return{usedPct:3.2,bad:0,warn:1,sizes:{},checks:[{tone:'ok',label:'Kapasitas spreadsheet',detail:'3.2% dari batas 10 juta sel. 42 catatan hadir, 6 acara.'},{tone:'ok',label:'Pemicu otomatis',detail:'Aktif (pengingat, penutupan acara, laporan PDF).'},{tone:'ok',label:'Pemicu terakhir berjalan',detail:'3 menit lalu.'},{tone:'ok',label:'Backup harian',detail:'Terakhir hari ini 02:00.'},{tone:'info',label:'Arsip data lama',detail:'Belum ada data yang perlu diarsipkan.'},{tone:'ok',label:'Pesan Telegram hari ini',detail:'Semua terkirim.'},{tone:'ok',label:'Webhook bot',detail:'Terpasang, antrean 0.'},{tone:'ok',label:'Integritas log',detail:'3 catatan terverifikasi utuh.'},{tone:'warn',label:'Pengajuan koreksi',detail:MC.filter(x=>x.status==='pending').length+' menunggu keputusan.'},{tone:'warn',label:'Jumlah admin',detail:'1 admin. Disarankan minimal 2 supaya ada cadangan.'}]};
+  case'health':return{usedPct:3.2,bad:0,warn:1,sizes:{},checks:[{tone:'ok',label:'Kapasitas spreadsheet',detail:'3.2% dari batas 10 juta sel. 42 catatan hadir, 6 acara.'},{tone:'ok',label:'Pemicu otomatis',detail:'Aktif (pengingat, penutupan acara, laporan PDF).'},{tone:'ok',label:'Pemicu terakhir berjalan',detail:'3 menit lalu.'},{tone:'ok',label:'Backup harian',detail:'Terakhir hari ini 02:00.'},{tone:'info',label:'Arsip data lama',detail:'Belum ada data yang perlu diarsipkan.'},{tone:'ok',label:'Pesan Telegram hari ini',detail:'Semua terkirim.'},{tone:'ok',label:'Webhook bot',detail:'Terpasang, antrean 0.'},{tone:'ok',label:'Integritas log',detail:'3 catatan terverifikasi utuh.'},{tone:'warn',label:'Pengajuan koreksi',detail:MC.filter(x=>x.status==='pending').length+' menunggu keputusan.'},{tone:'ok',label:'Proteksi sheet',detail:'Semua sheet hanya bisa diedit pemilik script. Admin lain bekerja lewat aplikasi.'},{tone:'ok',label:'Usia BOT_TOKEN',detail:'±12 hari sejak pertama dipantau.'},{tone:'ok',label:'Usia secret webhook',detail:'±12 hari.'},{tone:'warn',label:'Jumlah admin',detail:'1 admin. Disarankan minimal 2 supaya ada cadangan.'}]};
   case'members':return{items:[{id:'m1',userId:'11',name:'Budi Santoso',username:'budi'},{id:'m2',userId:'12',name:'Siti Aminah',username:''},{id:'m3',userId:'13',name:'Dimas Prakoso',username:''}]};
   case'group_invite':return{code:'a1b2c3d4e5',link:'https://t.me/contoh_bot?start=join_a1b2c3d4e5'};
   case'recap':return{groupName:'Kelas A',total:4,minPct:60,rows:[{name:'Budi Santoso',hadir:4,terlambat:0,izin:0,sakit:0,alpa:0,pct:100,below:false},{name:'Siti Aminah',hadir:2,terlambat:1,izin:1,sakit:0,alpa:0,pct:75,below:false},{name:'Dimas Prakoso',hadir:1,terlambat:0,izin:0,sakit:0,alpa:3,pct:25,below:true}]};
